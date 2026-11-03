@@ -179,6 +179,10 @@ dashboard uses `api/__hidden_dev_dashboard`, `api/auth/token…` as above, plus 
 live. The dashboard's pages find those routes, and their own, by URL name, so they follow wherever the
 routes are mounted.
 
+The tokens are kept in `localStorage` under the keys django-simple-3rd-party-jwt's Microsoft login writes
+to: its `MICROSOFT_JWT_REDIRECT_ACCESS_TOKEN_KEY` and `MICROSOFT_JWT_REDIRECT_REFRESH_TOKEN_KEY` settings
+(`access_token` and `refresh_token` unless you change them).
+
 ### Startup checks
 
 When the dashboard's URLs are included, Django's `check` (also run by `runserver` and `migrate`) looks
@@ -376,15 +380,18 @@ tox -e py
 `tox -e py` checks the package manifest and runs the tests with pytest. For a quicker loop, run
 `pip install -e . pytest pytest-django` once and then `pytest tests`. The tests use
 `tests/settings.py`, which follows the quick start, and run against the django-simple-third-party-jwt
-release on PyPI. CI runs them on Python 3.8 to 3.14, on the oldest supported Django (4.0), and also
-builds the package and checks that the wheel carries every template.
+release on PyPI. CI runs them on Python 3.8 to 3.14, once more with every dependency at the lowest
+version `setup.py` allows (read from the package metadata), and also builds and checks the package.
+tox tests the installed package rather than `src/`, so a template missing from the package fails the
+page tests.
 
 ```text
 src/django_simple_third_party_jwt_dev_dashboard/
     views.py       the dashboard page, session login and logout
     all_urls.py    every URL the dashboard needs, for one include()
     checks.py      the startup checks
-    settings.py    DEV_DASHBOARD_SETTINGS and its defaults
+    settings.py    DEV_DASHBOARD_SETTINGS, its defaults and the Simple JWT URL table
+    compat.py      what is kept only for code written for 0.2.x, to be dropped in 1.0
     templates/     base.html, dashboard.html, login.html, and the CSS and JavaScript they include
 example/           the runnable example project and its Docker Compose demo
 tests/             the test suite; tests/settings.py mirrors the quick start
