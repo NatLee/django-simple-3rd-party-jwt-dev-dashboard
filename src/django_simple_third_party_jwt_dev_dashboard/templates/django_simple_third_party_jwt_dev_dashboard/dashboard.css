@@ -31,10 +31,14 @@
   --dd-warn: #925600;
   --dd-warn-soft: #fcf0d9;
 
-  /* The three parts of a JWT: header.payload.signature */
+  /* The three parts of a JWT: header.payload.signature. The bright set is for dark surfaces:
+     the dark theme and the top bar, which is dark in both themes. */
   --dd-jwt-header: #c92a62;
   --dd-jwt-payload: #6941c6;
   --dd-jwt-signature: #0b7c88;
+  --dd-jwt-header-bright: #ff7aa6;
+  --dd-jwt-payload-bright: #b29bff;
+  --dd-jwt-signature-bright: #4fd0da;
 
   --dd-bar: #101824;
   --dd-bar-text: #f2f5f9;
@@ -71,9 +75,9 @@
     --dd-warn: #f1b54f;
     --dd-warn-soft: rgba(241, 181, 79, 0.13);
 
-    --dd-jwt-header: #ff7aa6;
-    --dd-jwt-payload: #b29bff;
-    --dd-jwt-signature: #4fd0da;
+    --dd-jwt-header: var(--dd-jwt-header-bright);
+    --dd-jwt-payload: var(--dd-jwt-payload-bright);
+    --dd-jwt-signature: var(--dd-jwt-signature-bright);
 
     --dd-bar: #06090d;
     --dd-bar-line: rgba(255, 255, 255, 0.08);
@@ -134,6 +138,9 @@ body.dd {
   white-space: nowrap;
 }
 .dd-brand__mark { display: block; flex: none; }
+.dd-brand__mark .dd-jwt-part--header { fill: var(--dd-jwt-header-bright); }
+.dd-brand__mark .dd-jwt-part--payload { fill: var(--dd-jwt-payload-bright); }
+.dd-brand__mark .dd-jwt-part--signature { fill: var(--dd-jwt-signature-bright); }
 .dd-tag {
   font: 600 10.5px/1 var(--dd-mono);
   letter-spacing: 0.08em;

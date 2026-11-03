@@ -170,6 +170,13 @@ class AssetTests(TestCase):
             self.assertIsNone(re.search(r"\$\(|\bjQuery\b", source), template.name)
         # test_the_only_external_script_is_googles_sign_in covers the jQuery <script> itself.
 
+    def test_page_templates_leave_colours_to_the_stylesheet(self):
+        # Colours live in dashboard.css as variables, so overriding them restyles everything.
+        for name in ("base.html", "dashboard.html", "login.html"):
+            source = (PACKAGE / "templates" / name).read_text("utf-8")
+
+            self.assertNotIn('style="', source, name)
+
     def test_included_files_have_no_template_tags(self):
         # base.html includes them as templates; a stray "{%" would break every page.
         for name in ("dashboard.css", "dashboard.js"):
