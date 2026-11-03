@@ -1,6 +1,6 @@
 """The dashboard page and the session login and logout behind it."""
 from functools import wraps
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, NamedTuple, Optional
 
 from django.conf import settings as django_settings
 from django.contrib.auth import login as auth_login
@@ -26,14 +26,35 @@ from django_simple_third_party_jwt_dev_dashboard.settings import (
 # whose page is not served (see page_context).
 URL_SETTING_KEYS = tuple(DEFAULT_DEV_DASHBOARD_SETTINGS)
 
+class SignIn(NamedTuple):
+    """A third-party sign-in, as django-simple-third-party-jwt's settings set it up."""
+
+    label: str
+    client_id: Any
+
+    @property
+    def configured(self) -> bool:
+        # The package's own rule: a credential is set when it has a value. Its releases after
+        # 0.4.0 have no Microsoft demo app, so an unset SOCIAL_MICROSOFT_CLIENT_ID is None there,
+        # and its manage.py check names the settings to add.
+        return bool(self.client_id)
+
+
+# The sign-ins the pages offer, in the order the OAuth clients card lists them.
+SIGN_INS = {
+    "google": SignIn("Google", jwt_settings.SOCIAL_GOOGLE_CLIENT_ID),
+    "microsoft": SignIn("Microsoft", jwt_settings.SOCIAL_MICROSOFT_CLIENT_ID),
+}
+
 # The pages live in templates/<this package>/, the usual Django namespace, so a project's own
 # base.html or login.html cannot replace them by accident.
 TEMPLATE_DIR = __package__ + "/"
 
 # Template context shared by every page, built once when Django imports the views.
 dev_dashboard_setting = {
-    "social_google_client_id": jwt_settings.SOCIAL_GOOGLE_CLIENT_ID,
-    "social_microsoft_client_id": jwt_settings.SOCIAL_MICROSOFT_CLIENT_ID,
+    "sign_ins": SIGN_INS,
+    "social_google_client_id": SIGN_INS["google"].client_id,
+    "social_microsoft_client_id": SIGN_INS["microsoft"].client_id,
     # localStorage keys for the tokens: the base package's Microsoft login writes to these.
     "access_token_key": jwt_settings.MICROSOFT_JWT_REDIRECT_ACCESS_TOKEN_KEY,
     "refresh_token_key": jwt_settings.MICROSOFT_JWT_REDIRECT_REFRESH_TOKEN_KEY,

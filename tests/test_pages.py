@@ -97,6 +97,46 @@ class LinkTests(TestCase):
         self.assertNotContains(response, 'class="g_id_signin"')
 
 
+class SignInSetupTests(TestCase):
+    """A sign-in without a client ID (no Microsoft demo app after django-simple-third-party-jwt 0.4.0)."""
+
+    def not_set_up(self, key):
+        sign_ins = {**views.SIGN_INS, key: views.SignIn(views.SIGN_INS[key].label, None)}
+        return mock.patch.dict(views.dev_dashboard_setting, {"sign_ins": sign_ins, "social_%s_client_id" % key: None})
+
+    def test_configured_means_the_setting_has_a_value(self):
+        self.assertTrue(views.SignIn("Microsoft", "an-id").configured)
+        self.assertFalse(views.SignIn("Microsoft", None).configured)
+        self.assertFalse(views.SignIn("Microsoft", "").configured)
+
+    def test_the_test_settings_set_up_both(self):
+        response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, 'id="microsoft-login-button"')
+        self.assertContains(response, 'class="g_id_signin"')
+        self.assertNotContains(response, "is not set up")
+
+    def test_microsoft_without_a_client_id(self):
+        with self.not_set_up("microsoft"):
+            response = self.client.get(DASHBOARD)
+
+        self.assertNotContains(response, "None")
+        self.assertNotContains(response, 'id="microsoft-login-button"')
+        self.assertContains(response, "Microsoft sign-in is not set up")
+        self.assertContains(response, '<span class="dd-muted">Not set up</span>')
+        self.assertContains(response, 'class="g_id_signin"')  # Google is untouched
+
+    def test_google_without_a_client_id(self):
+        with self.not_set_up("google"):
+            response = self.client.get(DASHBOARD)
+
+        self.assertNotContains(response, "None")
+        self.assertNotContains(response, 'class="g_id_signin"')
+        self.assertNotContains(response, 'name="google-signin-client_id"')
+        self.assertContains(response, "Google sign-in is not set up")
+        self.assertContains(response, 'id="microsoft-login-button"')
+
+
 class TokenStorageTests(TestCase):
     """The tokens go where django-simple-third-party-jwt's Microsoft login puts them."""
 

@@ -147,7 +147,8 @@ LOGIN_REDIRECT_URL = '/' + DEV_DASHBOARD_SETTINGS['dashboard_url']  # where a Mi
 # SECURE_REFERRER_POLICY and SECURE_CROSS_ORIGIN_OPENER_POLICY keep Django's defaults.
 
 # To try your own Google / Microsoft apps, export these before `runserver`.
-# Unset ones are left to django-simple-third-party-jwt's built-in demo values.
+# Unset ones are left to django-simple-third-party-jwt's defaults (a demo Google app; no Microsoft
+# demo after its 0.4.0, so the dashboard shows Microsoft sign-in as not set up).
 for _name in (
     'SOCIAL_GOOGLE_CLIENT_ID',
     'SOCIAL_MICROSOFT_CLIENT_ID',
