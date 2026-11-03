@@ -6,14 +6,14 @@
 //
 // show_login_error(), show_verified_token(), get_jwt_using_google_credential() and logout()
 // keep the names and arguments they had in earlier versions, so templates that override
-// dashboard.html or login.html and call them keep working. No jQuery needed.
+// dashboard.html or login.html and call them keep working. Plain JavaScript: no library is loaded.
 
 function dd_url(name) {
   return document.body.getAttribute("data-" + name) || "";
 }
 
 // POST form fields; resolve with the JSON answer, or reject with { status, responseText }
-// (the part of jQuery's XHR object that show_login_error() has always read).
+// (the fields show_login_error() has always read from its argument).
 function dd_post(url, fields, accessToken) {
   var headers = {
     "Accept": "application/json",

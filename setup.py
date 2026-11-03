@@ -57,7 +57,6 @@ setuptools.setup(
         'djangorestframework',
         'django-simple-third-party-jwt>=0.2.3',
         'drf-yasg',
-        'django-bootstrap3'
     ],
     extras_require={
         'dev': ['check-manifest'],

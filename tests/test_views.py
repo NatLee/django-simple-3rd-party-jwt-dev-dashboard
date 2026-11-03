@@ -162,7 +162,7 @@ class LoginEdgeCaseTests(TestCase):
         self.assertContains(response, "Please enter a correct username and password")
 
     def test_login_works_without_a_csrf_token(self):
-        # The view is csrf_exempt, as it was when the login page posted the form with jQuery.
+        # The view is csrf_exempt, as it has always been.
         client = Client(enforce_csrf_checks=True)
 
         response = client.post(LOGIN, {"username": "alice", "password": "s3cret-pass"})

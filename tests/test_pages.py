@@ -1,11 +1,12 @@
 """What the redesigned pages promise: states, assets, and the parts that overriding templates rely on."""
 import re
+from importlib.metadata import requires
 from pathlib import Path
 from unittest import mock
 
 from django.contrib.auth.models import User
 from django.template import engines
-from django.test import RequestFactory, TestCase, modify_settings
+from django.test import RequestFactory, TestCase
 
 from django_simple_third_party_jwt_dev_dashboard import __version__, views
 
@@ -85,21 +86,25 @@ class AssetTests(TestCase):
         self.assertIn("function refresh_stored_token()", html)
         self.assertNotIn("<link", html)  # no stylesheet from a CDN
 
-    def test_external_scripts_are_pinned_or_googles_sign_in(self):
-        html = self.client.get(LOGIN).content.decode()
-        scripts = re.findall(r"<script src=\"([^\"]+)\"([^>]*)>", html)
+    def test_the_only_external_script_is_googles_sign_in(self):
+        # Google serves one moving version of it, so it cannot carry an integrity hash.
+        for page in (DASHBOARD, LOGIN):
+            html = self.client.get(page).content.decode()
 
-        self.assertEqual(len(scripts), 2)
-        for src, attributes in scripts:
-            if src == "https://accounts.google.com/gsi/client":
-                continue  # Google serves one moving version; it cannot be pinned.
-            self.assertIn('integrity="sha384-', attributes, src)
-            self.assertIn('crossorigin="anonymous"', attributes, src)
+            self.assertEqual(re.findall(r'<script src="([^"]+)"', html), ["https://accounts.google.com/gsi/client"])
 
-    def test_pages_work_without_bootstrap3_installed(self):
-        with modify_settings(INSTALLED_APPS={"remove": ["bootstrap3"]}):
-            self.assertEqual(self.client.get(DASHBOARD).status_code, 200)
-            self.assertEqual(self.client.get(LOGIN).status_code, 200)
+    def test_needs_neither_bootstrap3_nor_jquery(self):
+        # Dropped in 0.3.0 (user decision): the package does not depend on django-bootstrap3,
+        # tests/settings.py does not install it, and no page loads jQuery.
+        dependencies = [r.lower() for r in requires("django-simple-third-party-jwt-dev-dashboard")]
+
+        self.assertFalse([r for r in dependencies if r.startswith("django-bootstrap3")])
+        for template in (p for p in (PACKAGE / "templates").rglob("*") if p.is_file()):
+            source = template.read_text("utf-8")
+
+            self.assertNotIn("bootstrap", source.lower(), template.name)
+            self.assertIsNone(re.search(r"\$\(|\bjQuery\b", source), template.name)
+        # test_the_only_external_script_is_googles_sign_in covers the jQuery <script> itself.
 
     def test_included_files_have_no_template_tags(self):
         # base.html includes them as templates; a stray "{%" would break every page.
@@ -153,9 +158,6 @@ class OverrideContractTests(TestCase):
         self.assertIn('data-callback="get_jwt_using_google_credential"', html)
         self.assertIn('id="token"', html)
         self.assertIn('id="result"', html)
-
-    def test_jquery_is_still_loaded_for_overriding_templates(self):
-        self.assertContains(self.client.get(DASHBOARD), "ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js")
 
     def test_context_variables_are_unchanged(self):
         response = self.client.get(DASHBOARD)

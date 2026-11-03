@@ -97,20 +97,27 @@ Username and password logins work right away; Google and Microsoft need [their s
 If a path does not line up, `runserver` and `manage.py check` tell you which one and how to fix it
 (see [startup checks](#startup-checks)).
 
-<details>
-<summary><b>Coming from an older version?</b></summary>
+## Upgrading from 0.2.x
 
-Your settings and `urls.py` keep working as they are. You can now drop three things:
+**Remove `"bootstrap3"` from `INSTALLED_APPS`.** django-bootstrap3 is no longer installed with the
+dashboard, so a fresh install with `"bootstrap3"` still listed stops with
+`ModuleNotFoundError: No module named 'bootstrap3'`. Keep it (and `pip install django-bootstrap3`
+yourself) only if your own templates use it.
 
-- `"bootstrap3"` from `INSTALLED_APPS`: the pages bring their own styles.
-- `SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"` and `SECURE_CROSS_ORIGIN_OPENER_POLICY = None`:
-  the dashboard sends the headers Sign in with Google needs on its own pages, so the rest of your
-  project keeps Django's safer defaults.
-- The six hand-written `path()` lines, in favour of the `all_urls` include above.
+**If you override the dashboard's templates**, two more things changed:
 
-If your project overrides `base.html`, copy the new one: the pages changed a lot.
+- The pages no longer use Bootstrap or jQuery: they bring their own CSS and plain JavaScript, and jQuery
+  is not loaded any more. A `dashboard.html` or `login.html` of yours that relies on Bootstrap classes,
+  `{% bootstrap_* %}` tags or `$` needs those back: load Bootstrap's CSS and jQuery in the
+  `extra_head` block (see [Customizing the pages](#customizing-the-pages)), or move it to the new markup.
+- `base.html` was rewritten. If you override it, start again from the new one.
 
-</details>
+Projects that only use the dashboard as it ships need nothing else. Optional clean-ups:
+
+- Drop `SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"` and `SECURE_CROSS_ORIGIN_OPENER_POLICY = None`:
+  the dashboard now sends the headers Sign in with Google needs on its own pages, so the rest of your
+  project can keep Django's safer defaults.
+- Replace the hand-written `path()` lines with the `all_urls` include above.
 
 ## What you can try
 
@@ -144,8 +151,8 @@ This package only brings pages. The work happens in two other places:
   `/<JWT_3RD_PREFIX>/auth/google/token` and `/<JWT_3RD_PREFIX>/auth/microsoft/...`.
 
 The dashboard is a set of buttons wired to those URLs, so you can see the whole flow working in your
-project. Its CSS and JavaScript ship inside the package; the browser still loads Google's Sign-In
-script, the Microsoft logo and (for templates that override these pages) jQuery from the internet.
+project. Its CSS and plain JavaScript ship inside the package; only Google's Sign-In script and the
+Microsoft logo come from the internet.
 
 ## Settings
 
@@ -328,7 +335,7 @@ generic, so a project-level `base.html` replaces the dashboard's one too; check 
   `<style>:root { --dd-accent: #0a7c55; }</style>`.
 - **JavaScript** functions you can call from your own templates: `show_verified_token(token, message)`,
   `show_login_error(xhr)`, `refresh_stored_token()`, `get_jwt_using_google_credential(response)` and
-  `logout()`. The page still loads jQuery 2.2.4 for templates written for older versions.
+  `logout()`. No JavaScript library is loaded, so bring your own in `extra_head` if you need one.
 
 ## Example project
 

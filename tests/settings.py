@@ -23,7 +23,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "bootstrap3",
     "django_simple_third_party_jwt",
     "django_simple_third_party_jwt_dev_dashboard",
 ]
