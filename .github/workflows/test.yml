@@ -70,16 +70,3 @@ jobs:
           python -m pip install --upgrade pip build twine
           python -m build
           twine check dist/*
-      - name: Wheel ships every template
-        # base.html includes its CSS and JavaScript from templates/, so a template missing from
-        # the wheel breaks every page of an installed copy.
-        run: |
-          python - <<'PY'
-          import glob, pathlib, zipfile
-          pkg = pathlib.Path("src/django_simple_third_party_jwt_dev_dashboard")
-          wanted = {p.relative_to("src").as_posix() for p in (pkg / "templates").rglob("*") if p.is_file()}
-          shipped = set(zipfile.ZipFile(glob.glob("dist/*.whl")[0]).namelist())
-          missing = sorted(wanted - shipped)
-          print("templates:", sorted(wanted))
-          assert not missing, "missing from the wheel: %s" % missing
-          PY

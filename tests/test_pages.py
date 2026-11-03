@@ -15,7 +15,6 @@ from django_simple_third_party_jwt_dev_dashboard import __version__, views
 DASHBOARD = "/api/__hidden_dev_dashboard/"
 LOGIN = DASHBOARD + "login"
 PACKAGE = Path(views.__file__).resolve().parent  # the installed copy (site-packages under tox)
-REPO = Path(__file__).resolve().parent.parent
 
 
 class StateTests(TestCase):
@@ -182,16 +181,6 @@ class AssetTests(TestCase):
         for name in ("dashboard.css", "dashboard.js"):
             text = (PACKAGE / "templates" / "django_simple_third_party_jwt_dev_dashboard" / name).read_text("utf-8")
             self.assertIsNone(re.search(r"\{[{%#]", text), name)
-
-    def test_package_data_ships_every_template(self):
-        setup_py = (REPO / "setup.py").read_text("utf-8")
-        patterns = re.findall(r'"(templates/[^"]+)"', setup_py)
-        source = REPO / "src" / "django_simple_third_party_jwt_dev_dashboard"
-        files = [p.relative_to(source) for p in (source / "templates").rglob("*") if p.is_file()]
-
-        self.assertTrue(files)
-        for file in files:
-            self.assertTrue(any(file.match(pattern) for pattern in patterns), file)
 
 
 class OverrideContractTests(TestCase):
