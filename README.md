@@ -97,20 +97,27 @@ Username and password logins work right away; Google and Microsoft need [their s
 If a path does not line up, `runserver` and `manage.py check` tell you which one and how to fix it
 (see [startup checks](#startup-checks)).
 
-<details>
-<summary><b>Coming from an older version?</b></summary>
+## Upgrading from 0.2.x
 
-Your settings and `urls.py` keep working as they are. You can now drop three things:
+**Remove `"bootstrap3"` from `INSTALLED_APPS`.** django-bootstrap3 is no longer installed with the
+dashboard, so a fresh install with `"bootstrap3"` still listed stops with
+`ModuleNotFoundError: No module named 'bootstrap3'`. Keep it (and `pip install django-bootstrap3`
+yourself) only if your own templates use it.
 
-- `"bootstrap3"` from `INSTALLED_APPS`: the pages bring their own styles.
-- `SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"` and `SECURE_CROSS_ORIGIN_OPENER_POLICY = None`:
-  the dashboard sends the headers Sign in with Google needs on its own pages, so the rest of your
-  project keeps Django's safer defaults.
-- The six hand-written `path()` lines, in favour of the `all_urls` include above.
+**If you override the dashboard's templates**, two more things changed:
 
-If your project overrides `base.html`, copy the new one: the pages changed a lot.
+- The pages no longer use Bootstrap or jQuery: they bring their own CSS and plain JavaScript, and jQuery
+  is not loaded any more. A `dashboard.html` or `login.html` of yours that relies on Bootstrap classes,
+  `{% bootstrap_* %}` tags or `$` needs those back: load Bootstrap's CSS and jQuery in the
+  `extra_head` block (see [Customizing the pages](#customizing-the-pages)), or move it to the new markup.
+- `base.html` was rewritten. If you override it, start again from the new one.
 
-</details>
+Projects that only use the dashboard as it ships need nothing else. Optional clean-ups:
+
+- Drop `SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"` and `SECURE_CROSS_ORIGIN_OPENER_POLICY = None`:
+  the dashboard now sends the headers Sign in with Google needs on its own pages, so the rest of your
+  project can keep Django's safer defaults.
+- Replace the hand-written `path()` lines with the `all_urls` include above.
 
 ## What you can try
 
@@ -144,8 +151,8 @@ This package only brings pages. The work happens in two other places:
   `/<JWT_3RD_PREFIX>/auth/google/token` and `/<JWT_3RD_PREFIX>/auth/microsoft/...`.
 
 The dashboard is a set of buttons wired to those URLs, so you can see the whole flow working in your
-project. Its CSS and JavaScript ship inside the package; the browser still loads Google's Sign-In
-script, the Microsoft logo and (for templates that override these pages) jQuery from the internet.
+project. Its CSS and plain JavaScript ship inside the package; only Google's Sign-In script and the
+Microsoft logo come from the internet.
 
 ## Settings
 
@@ -156,7 +163,7 @@ serves the first four for you.
 
 | Key | What uses it | Quick start value |
 |---|---|---|
-| `dashboard_url` | the dashboard itself, its login and logout | `api/__hidden_dev_dashboard` |
+| `dashboard_url` | where `all_urls` mounts the dashboard, its login and logout | `api/__hidden_dev_dashboard` |
 | `jwt_token_url` | the **JWT Login** button | `api/auth/token` |
 | `jwt_refresh_url` | the token refresh on every dashboard visit | `api/auth/token/refresh` |
 | `jwt_verify_url` | the token check after each login or refresh | `api/auth/token/verify` |
@@ -168,8 +175,13 @@ A link whose key is missing is hidden. If you leave out `DEV_DASHBOARD_SETTINGS`
 dashboard uses `api/__hidden_dev_dashboard`, `api/auth/token…` as above, plus `api/__hidden_admin`,
 `api/__hidden_swagger` and `api/__hidden_redoc` for the three links.
 
-`JWT_3RD_PREFIX` belongs to django-simple-3rd-party-jwt and must not be empty: the Google and Microsoft
-buttons call `/<JWT_3RD_PREFIX>/auth/...`.
+`JWT_3RD_PREFIX` belongs to django-simple-3rd-party-jwt and decides where its Google and Microsoft routes
+live. The dashboard's pages find those routes, and their own, by URL name, so they follow wherever the
+routes are mounted.
+
+The tokens are kept in `localStorage` under the keys django-simple-3rd-party-jwt's Microsoft login writes
+to: its `MICROSOFT_JWT_REDIRECT_ACCESS_TOKEN_KEY` and `MICROSOFT_JWT_REDIRECT_REFRESH_TOKEN_KEY` settings
+(`access_token` and `refresh_token` unless you change them).
 
 ### Startup checks
 
@@ -181,12 +193,11 @@ and a project that does not serve the dashboard (say, only while `DEBUG` is on) 
 |---|---|
 | `dev_dashboard.W001` | `django_simple_third_party_jwt` is not in `INSTALLED_APPS` |
 | `dev_dashboard.W002` | the `django.template.context_processors.request` context processor is missing |
-| `dev_dashboard.W003` | the dashboard is served somewhere other than `dashboard_url` |
-| `dev_dashboard.W004` | a Simple JWT URL is missing from the settings or nothing serves it |
-| `dev_dashboard.W005` | the Google and Microsoft routes are not served, or `JWT_3RD_PREFIX` is empty |
-| `dev_dashboard.W006` | the Admin, Swagger or Redoc link points at a page nothing serves |
+| `dev_dashboard.W003` | a Simple JWT URL is missing from the settings or nothing serves it |
+| `dev_dashboard.W004` | the Google and Microsoft routes (`django_simple_third_party_jwt.urls`) are not included |
+| `dev_dashboard.W005` | the Admin, Swagger or Redoc link points at a page nothing serves |
 
-Silence one you do not care about with `SILENCED_SYSTEM_CHECKS = ["dev_dashboard.W006"]`.
+Silence one you do not care about with `SILENCED_SYSTEM_CHECKS = ["dev_dashboard.W005"]`.
 
 ### Google and Microsoft login
 
@@ -328,7 +339,7 @@ generic, so a project-level `base.html` replaces the dashboard's one too; check 
   `<style>:root { --dd-accent: #0a7c55; }</style>`.
 - **JavaScript** functions you can call from your own templates: `show_verified_token(token, message)`,
   `show_login_error(xhr)`, `refresh_stored_token()`, `get_jwt_using_google_credential(response)` and
-  `logout()`. The page still loads jQuery 2.2.4 for templates written for older versions.
+  `logout()`. No JavaScript library is loaded, so bring your own in `extra_head` if you need one.
 
 ## Example project
 
@@ -369,15 +380,18 @@ tox -e py
 `tox -e py` checks the package manifest and runs the tests with pytest. For a quicker loop, run
 `pip install -e . pytest pytest-django` once and then `pytest tests`. The tests use
 `tests/settings.py`, which follows the quick start, and run against the django-simple-third-party-jwt
-release on PyPI. CI runs them on Python 3.8 to 3.14, on the oldest supported Django (4.0), and also
-builds the package and checks that the wheel carries every template.
+release on PyPI. CI runs them on Python 3.8 to 3.14, once more with every dependency at the lowest
+version `setup.py` allows (read from the package metadata), and also builds and checks the package.
+tox tests the installed package rather than `src/`, so a template missing from the package fails the
+page tests.
 
 ```text
 src/django_simple_third_party_jwt_dev_dashboard/
     views.py       the dashboard page, session login and logout
     all_urls.py    every URL the dashboard needs, for one include()
     checks.py      the startup checks
-    settings.py    DEV_DASHBOARD_SETTINGS and its defaults
+    settings.py    DEV_DASHBOARD_SETTINGS, its defaults and the Simple JWT URL table
+    compat.py      what is kept only for code written for 0.2.x, to be dropped in 1.0
     templates/     base.html, dashboard.html, login.html, and the CSS and JavaScript they include
 example/           the runnable example project and its Docker Compose demo
 tests/             the test suite; tests/settings.py mirrors the quick start

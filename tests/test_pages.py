@@ -1,18 +1,20 @@
 """What the redesigned pages promise: states, assets, and the parts that overriding templates rely on."""
 import re
+import types
+from importlib.metadata import requires
 from pathlib import Path
 from unittest import mock
 
 from django.contrib.auth.models import User
 from django.template import engines
-from django.test import RequestFactory, TestCase, modify_settings
+from django.test import RequestFactory, TestCase, override_settings
+from django.urls import include, path
 
 from django_simple_third_party_jwt_dev_dashboard import __version__, views
 
 DASHBOARD = "/api/__hidden_dev_dashboard/"
 LOGIN = DASHBOARD + "login"
 PACKAGE = Path(views.__file__).resolve().parent  # the installed copy (site-packages under tox)
-REPO = Path(__file__).resolve().parent.parent
 
 
 class StateTests(TestCase):
@@ -58,6 +60,68 @@ class StateTests(TestCase):
         self.assertContains(self.client.get(LOGIN), 'href="%s" aria-current="page"' % LOGIN)
 
 
+class LinkTests(TestCase):
+    """Links come from the URLconf by name, not from a copy of its layout."""
+
+    def urlconf(self, *patterns):
+        module = types.ModuleType("made_up_urls")
+        module.urlpatterns = list(patterns)
+        return module
+
+    def test_links_follow_the_routes_wherever_they_are_mounted(self):
+        moved = self.urlconf(
+            path("dev/", include("django_simple_third_party_jwt_dev_dashboard.urls")),
+            path("sso/", include("django_simple_third_party_jwt.urls")),
+        )
+        with override_settings(ROOT_URLCONF=moved):
+            User.objects.create_user("alice", password="s3cret-pass")
+            self.client.login(username="alice", password="s3cret-pass")
+            html = self.client.get("/dev/").content.decode()
+
+        self.assertIn('data-dashboard-url="/dev/"', html)
+        self.assertIn('href="/dev/logout"', html)
+        self.assertIn('data-google-token-url="/sso/api/auth/google/token"', html)
+        self.assertIn("location.href='/sso/api/auth/microsoft/signin'", html)
+        self.assertIn("<code>/sso/api/auth/google/token</code>", html)
+
+    def test_without_the_base_package_routes_the_buttons_are_replaced_by_a_note(self):
+        alone = self.urlconf(path("dev/", include("django_simple_third_party_jwt_dev_dashboard.urls")))
+        with override_settings(ROOT_URLCONF=alone):
+            response = self.client.get("/dev/")
+
+        self.assertContains(response, "Not available: this project does not include")
+        self.assertNotContains(response, 'id="microsoft-login-button"')
+        self.assertNotContains(response, 'class="g_id_signin"')
+
+
+class TokenStorageTests(TestCase):
+    """The tokens go where django-simple-third-party-jwt's Microsoft login puts them."""
+
+    def test_storage_keys_come_from_the_base_package(self):
+        from django_simple_third_party_jwt import settings as jwt_settings
+
+        self.assertEqual(views.dev_dashboard_setting["access_token_key"], jwt_settings.MICROSOFT_JWT_REDIRECT_ACCESS_TOKEN_KEY)
+        self.assertEqual(views.dev_dashboard_setting["refresh_token_key"], jwt_settings.MICROSOFT_JWT_REDIRECT_REFRESH_TOKEN_KEY)
+
+    def test_pages_pass_the_keys_to_the_script(self):
+        keys = {"access_token_key": "my_access", "refresh_token_key": "my_refresh"}
+        with mock.patch.dict(views.dev_dashboard_setting, keys):
+            response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, 'data-access-token-key="my_access"')
+        self.assertContains(response, 'data-refresh-token-key="my_refresh"')
+
+    def test_script_has_no_storage_keys_of_its_own(self):
+        script = (PACKAGE / "templates" / "django_simple_third_party_jwt_dev_dashboard" / "dashboard.js").read_text("utf-8")
+
+        self.assertNotIn('"access_token"', script)
+        self.assertNotIn('"refresh_token"', script)
+        # Only the dd_tokens object reads or writes localStorage.
+        start = script.index("var dd_tokens")
+        outside = script[:start] + script[script.index("\n};\n", start):]
+        self.assertNotIn("localStorage.", outside)
+
+
 class LoginFormTests(TestCase):
     def test_session_login_is_a_plain_form_post_to_the_login_view(self):
         # It works without JavaScript; only JWT Login needs it.
@@ -85,37 +149,38 @@ class AssetTests(TestCase):
         self.assertIn("function refresh_stored_token()", html)
         self.assertNotIn("<link", html)  # no stylesheet from a CDN
 
-    def test_external_scripts_are_pinned_or_googles_sign_in(self):
-        html = self.client.get(LOGIN).content.decode()
-        scripts = re.findall(r"<script src=\"([^\"]+)\"([^>]*)>", html)
+    def test_the_only_external_script_is_googles_sign_in(self):
+        # Google serves one moving version of it, so it cannot carry an integrity hash.
+        for page in (DASHBOARD, LOGIN):
+            html = self.client.get(page).content.decode()
 
-        self.assertEqual(len(scripts), 2)
-        for src, attributes in scripts:
-            if src == "https://accounts.google.com/gsi/client":
-                continue  # Google serves one moving version; it cannot be pinned.
-            self.assertIn('integrity="sha384-', attributes, src)
-            self.assertIn('crossorigin="anonymous"', attributes, src)
+            self.assertEqual(re.findall(r'<script src="([^"]+)"', html), ["https://accounts.google.com/gsi/client"])
 
-    def test_pages_work_without_bootstrap3_installed(self):
-        with modify_settings(INSTALLED_APPS={"remove": ["bootstrap3"]}):
-            self.assertEqual(self.client.get(DASHBOARD).status_code, 200)
-            self.assertEqual(self.client.get(LOGIN).status_code, 200)
+    def test_needs_neither_bootstrap3_nor_jquery(self):
+        # Dropped in 0.3.0 (user decision): the package does not depend on django-bootstrap3,
+        # tests/settings.py does not install it, and no page loads jQuery.
+        dependencies = [r.lower() for r in requires("django-simple-third-party-jwt-dev-dashboard")]
+
+        self.assertFalse([r for r in dependencies if r.startswith("django-bootstrap3")])
+        for template in (p for p in (PACKAGE / "templates").rglob("*") if p.is_file()):
+            source = template.read_text("utf-8")
+
+            self.assertNotIn("bootstrap", source.lower(), template.name)
+            self.assertIsNone(re.search(r"\$\(|\bjQuery\b", source), template.name)
+        # test_the_only_external_script_is_googles_sign_in covers the jQuery <script> itself.
+
+    def test_page_templates_leave_colours_to_the_stylesheet(self):
+        # Colours live in dashboard.css as variables, so overriding them restyles everything.
+        for name in ("base.html", "dashboard.html", "login.html"):
+            source = (PACKAGE / "templates" / name).read_text("utf-8")
+
+            self.assertNotIn('style="', source, name)
 
     def test_included_files_have_no_template_tags(self):
         # base.html includes them as templates; a stray "{%" would break every page.
         for name in ("dashboard.css", "dashboard.js"):
             text = (PACKAGE / "templates" / "django_simple_third_party_jwt_dev_dashboard" / name).read_text("utf-8")
             self.assertIsNone(re.search(r"\{[{%#]", text), name)
-
-    def test_package_data_ships_every_template(self):
-        setup_py = (REPO / "setup.py").read_text("utf-8")
-        patterns = re.findall(r'"(templates/[^"]+)"', setup_py)
-        source = REPO / "src" / "django_simple_third_party_jwt_dev_dashboard"
-        files = [p.relative_to(source) for p in (source / "templates").rglob("*") if p.is_file()]
-
-        self.assertTrue(files)
-        for file in files:
-            self.assertTrue(any(file.match(pattern) for pattern in patterns), file)
 
 
 class OverrideContractTests(TestCase):
@@ -153,9 +218,6 @@ class OverrideContractTests(TestCase):
         self.assertIn('data-callback="get_jwt_using_google_credential"', html)
         self.assertIn('id="token"', html)
         self.assertIn('id="result"', html)
-
-    def test_jquery_is_still_loaded_for_overriding_templates(self):
-        self.assertContains(self.client.get(DASHBOARD), "ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js")
 
     def test_context_variables_are_unchanged(self):
         response = self.client.get(DASHBOARD)

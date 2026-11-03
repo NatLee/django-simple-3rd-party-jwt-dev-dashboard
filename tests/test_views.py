@@ -31,19 +31,16 @@ class DashboardPageTests(TestCase):
 
         # The JavaScript reads the paths from data-* attributes on <body>.
         self.assertContains(response, 'href="/api/__hidden_admin"')
-        self.assertContains(response, 'data-dashboard-url="/api/__hidden_dev_dashboard"')
+        self.assertContains(response, 'data-dashboard-url="/api/__hidden_dev_dashboard/"')
         self.assertContains(response, 'data-jwt-refresh-url="/api/auth/token/refresh"')
         self.assertContains(response, 'data-jwt-verify-url="/api/auth/token/verify"')
 
-    def test_third_party_login_links_match_base_package_routes(self):
-        # The dashboard builds these URLs by hand; they must match the routes that
-        # django-simple-third-party-jwt actually serves.
+    def test_third_party_login_links_are_the_base_package_routes(self):
         response = self.client.get(DASHBOARD)
 
-        # The Google button's JavaScript posts to data-third-party-jwt-url + "/auth/google/token".
-        self.assertContains(response, 'data-third-party-jwt-url="/api"')
-        self.assertContains(response, 'dd_url("third-party-jwt-url") + "/auth/google/token"')
-        self.assertEqual(reverse("google-token"), "/api" + "/auth/google/token")
+        # The Google button's JavaScript posts to data-google-token-url.
+        self.assertContains(response, 'data-google-token-url="%s"' % reverse("google-token"))
+        self.assertContains(response, 'dd_config("google-token-url")')
         self.assertContains(response, "location.href='%s'" % reverse("microsoft-signin"))
 
 
@@ -162,7 +159,7 @@ class LoginEdgeCaseTests(TestCase):
         self.assertContains(response, "Please enter a correct username and password")
 
     def test_login_works_without_a_csrf_token(self):
-        # The view is csrf_exempt, as it was when the login page posted the form with jQuery.
+        # The view is csrf_exempt, as it has always been.
         client = Client(enforce_csrf_checks=True)
 
         response = client.post(LOGIN, {"username": "alice", "password": "s3cret-pass"})

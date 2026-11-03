@@ -31,16 +31,25 @@
   --dd-warn: #925600;
   --dd-warn-soft: #fcf0d9;
 
-  /* The three parts of a JWT: header.payload.signature */
+  /* The three parts of a JWT: header.payload.signature. The bright set is for dark surfaces:
+     the dark theme and the top bar, which is dark in both themes. */
   --dd-jwt-header: #c92a62;
   --dd-jwt-payload: #6941c6;
   --dd-jwt-signature: #0b7c88;
+  --dd-jwt-header-bright: #ff7aa6;
+  --dd-jwt-payload-bright: #b29bff;
+  --dd-jwt-signature-bright: #4fd0da;
 
   --dd-bar: #101824;
   --dd-bar-text: #f2f5f9;
   --dd-bar-muted: #a9b4c3;
   --dd-bar-hover: rgba(255, 255, 255, 0.08);
+  --dd-bar-active: rgba(255, 255, 255, 0.12);
   --dd-bar-line: rgba(255, 255, 255, 0.1);
+  --dd-bar-border: rgba(255, 255, 255, 0.22);
+  --dd-bar-border-hover: rgba(255, 255, 255, 0.36);
+  --dd-bar-ok: #6fd6a4;
+  --dd-bar-warn: #f4c26b;
 
   --dd-radius: 14px;
   --dd-radius-sm: 9px;
@@ -71,9 +80,9 @@
     --dd-warn: #f1b54f;
     --dd-warn-soft: rgba(241, 181, 79, 0.13);
 
-    --dd-jwt-header: #ff7aa6;
-    --dd-jwt-payload: #b29bff;
-    --dd-jwt-signature: #4fd0da;
+    --dd-jwt-header: var(--dd-jwt-header-bright);
+    --dd-jwt-payload: var(--dd-jwt-payload-bright);
+    --dd-jwt-signature: var(--dd-jwt-signature-bright);
 
     --dd-bar: #06090d;
     --dd-bar-line: rgba(255, 255, 255, 0.08);
@@ -134,6 +143,9 @@ body.dd {
   white-space: nowrap;
 }
 .dd-brand__mark { display: block; flex: none; }
+.dd-brand__mark .dd-jwt-part--header { fill: var(--dd-jwt-header-bright); }
+.dd-brand__mark .dd-jwt-part--payload { fill: var(--dd-jwt-payload-bright); }
+.dd-brand__mark .dd-jwt-part--signature { fill: var(--dd-jwt-signature-bright); }
 .dd-tag {
   font: 600 10.5px/1 var(--dd-mono);
   letter-spacing: 0.08em;
@@ -143,8 +155,8 @@ body.dd {
   border: 1px solid currentColor;
   white-space: nowrap;
 }
-.dd-tag--ok { color: #6fd6a4; }
-.dd-tag--warn { color: #f4c26b; }
+.dd-tag--ok { color: var(--dd-bar-ok); }
+.dd-tag--warn { color: var(--dd-bar-warn); }
 
 .dd-nav {
   display: flex;
@@ -166,7 +178,7 @@ body.dd {
   white-space: nowrap;
 }
 .dd .dd-nav a:hover { color: var(--dd-bar-text); background: var(--dd-bar-hover); }
-.dd .dd-nav a[aria-current="page"] { color: var(--dd-bar-text); background: rgba(255, 255, 255, 0.12); }
+.dd .dd-nav a[aria-current="page"] { color: var(--dd-bar-text); background: var(--dd-bar-active); }
 
 .dd-account { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
 .dd-user {
@@ -192,9 +204,9 @@ body.dd {
 .dd .dd-topbar .dd-btn {
   color: var(--dd-bar-text);
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: var(--dd-bar-border);
 }
-.dd .dd-topbar .dd-btn:hover { background: var(--dd-bar-hover); border-color: rgba(255, 255, 255, 0.36); color: var(--dd-bar-text); }
+.dd .dd-topbar .dd-btn:hover { background: var(--dd-bar-hover); border-color: var(--dd-bar-border-hover); color: var(--dd-bar-text); }
 
 /* ---------- Layout ---------- */
 
@@ -446,7 +458,8 @@ body.dd {
 }
 @keyframes dd-spin { to { transform: rotate(360deg); } }
 
-/* Google renders its own button; this one is drawn to sit next to it. */
+/* Google renders its own button; this one is drawn to sit next to it. Its colours are Microsoft's
+   sign-in button guideline values and stay the same in both themes, like Google's button. */
 .dd-providers { display: grid; gap: 10px; justify-items: start; margin-top: 14px; }
 .dd-providers .g_id_signin { min-height: 40px; }
 #microsoft-login-button {
