@@ -1,4 +1,7 @@
 """The dashboard page and the session login and logout behind it."""
+from functools import wraps
+from typing import Any, Callable
+
 from django.conf import settings as django_settings
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import logout as auth_logout
@@ -32,13 +35,38 @@ dev_dashboard_setting = {
     "debug": django_settings.DEBUG,
 }
 
+# Sign in with Google needs both on the page that shows its button: Google checks the page's
+# origin from the Referer, and its popup has to talk back to this window. Django's defaults
+# ("same-origin" for both) block that. Sending them from the dashboard's own pages means the
+# project no longer has to relax SECURE_REFERRER_POLICY and SECURE_CROSS_ORIGIN_OPENER_POLICY
+# everywhere. The values are what those two settings gave in the README's earlier setup.
+GOOGLE_SIGN_IN_HEADERS = {
+    "Referrer-Policy": "no-referrer-when-downgrade",
+    "Cross-Origin-Opener-Policy": "unsafe-none",
+}
 
+
+def allow_google_sign_in(view: Callable[..., HttpResponse]) -> Callable[..., HttpResponse]:
+    """Send GOOGLE_SIGN_IN_HEADERS with the view's response (SecurityMiddleware keeps them)."""
+
+    @wraps(view)
+    def wrapper(request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        response = view(request, *args, **kwargs)
+        for header, value in GOOGLE_SIGN_IN_HEADERS.items():
+            response[header] = value
+        return response
+
+    return wrapper
+
+
+@allow_google_sign_in
 def dashboard(request: HttpRequest) -> HttpResponse:
     """Show the client IDs, the JWT kept in the browser and the session state."""
     return render(request, "dashboard.html", dev_dashboard_setting)
 
 
 @csrf_exempt
+@allow_google_sign_in
 def login(request: HttpRequest) -> HttpResponse:
     """Session login with username and password; the page also offers JWT login."""
     if request.method == "POST":
