@@ -41,27 +41,24 @@ class StartupCheckTests(SimpleTestCase):
         with override_settings(ROOT_URLCONF=urlconf(DASHBOARD_URLS, BASE_PACKAGE, ADMIN)):
             found = checks.run_checks(tags=[checks.Tags.urls])
 
-        self.assertIn("dev_dashboard.W004", [message.id for message in found])
+        self.assertIn("dev_dashboard.W003", [message.id for message in found])
 
     def test_quiet_when_the_dashboard_is_not_served(self):
         # For example a project that adds the dashboard's URLs only while DEBUG is on.
         with override_settings(ROOT_URLCONF=urlconf(BASE_PACKAGE, *SIMPLE_JWT)):
             self.assertEqual(self.ids(), [])
 
-    def test_dashboard_mounted_somewhere_else(self):
+    def test_dashboard_mounted_somewhere_else_is_fine(self):
+        # The pages link to their own routes by name, so dashboard_url does not have to match.
         elsewhere = path("dev/", include("django_simple_third_party_jwt_dev_dashboard.urls"))
         with override_settings(ROOT_URLCONF=urlconf(elsewhere, BASE_PACKAGE, ADMIN, *SIMPLE_JWT)):
-            found = check_dashboard_setup()
-
-        self.assertEqual([m.id for m in found], ["dev_dashboard.W003"])
-        self.assertIn("served at /dev/", found[0].msg)
-        self.assertIn("'dev'", found[0].hint)
+            self.assertEqual(self.ids(), [])
 
     def test_simple_jwt_urls_not_served(self):
         with override_settings(ROOT_URLCONF=urlconf(DASHBOARD_URLS, BASE_PACKAGE, ADMIN)):
             found = check_dashboard_setup()
 
-        self.assertEqual([m.id for m in found], ["dev_dashboard.W004"] * 3)
+        self.assertEqual([m.id for m in found], ["dev_dashboard.W003"] * 3)
         self.assertIn("/api/auth/token", found[0].msg)
         self.assertIn("JWT Login button", found[0].msg)
         self.assertIn("all_urls", found[0].hint)
@@ -70,35 +67,34 @@ class StartupCheckTests(SimpleTestCase):
         with mock.patch.dict(views.dev_dashboard_setting, {"jwt_verify_url": ""}):
             found = check_dashboard_setup()
 
-        self.assertEqual([m.id for m in found], ["dev_dashboard.W004"])
+        self.assertEqual([m.id for m in found], ["dev_dashboard.W003"])
         self.assertIn("'jwt_verify_url'", found[0].msg)
 
     def test_google_and_microsoft_routes_not_served(self):
         with override_settings(ROOT_URLCONF=urlconf(DASHBOARD_URLS, ADMIN, *SIMPLE_JWT)):
             found = check_dashboard_setup()
 
-        self.assertEqual([m.id for m in found], ["dev_dashboard.W005"])
-        self.assertIn("/api/auth/google/token", found[0].msg)
+        self.assertEqual([m.id for m in found], ["dev_dashboard.W004"])
+        self.assertIn("'google-token' or 'microsoft-signin'", found[0].msg)
 
-    def test_empty_third_party_prefix(self):
-        with mock.patch.dict(views.dev_dashboard_setting, {"third_party_jwt_url": ""}):
-            found = check_dashboard_setup()
-
-        self.assertEqual([m.id for m in found], ["dev_dashboard.W005"])
-        self.assertIn("JWT_3RD_PREFIX is empty", found[0].msg)
+    def test_google_and_microsoft_routes_anywhere_are_fine(self):
+        # Whatever path JWT_3RD_PREFIX gives them, the pages find them by name.
+        moved = path("elsewhere/", include("django_simple_third_party_jwt.urls"))
+        with override_settings(ROOT_URLCONF=urlconf(DASHBOARD_URLS, moved, ADMIN, *SIMPLE_JWT)):
+            self.assertEqual(self.ids(), [])
 
     def test_navbar_link_to_a_page_that_is_not_served(self):
         # The defaults link to Swagger and Redoc pages that a project may not have.
         with mock.patch.dict(views.dev_dashboard_setting, {"swagger_url": "api/__hidden_swagger"}):
             found = check_dashboard_setup()
 
-        self.assertEqual([m.id for m in found], ["dev_dashboard.W006"])
+        self.assertEqual([m.id for m in found], ["dev_dashboard.W005"])
         self.assertIn("Swagger link goes to /api/__hidden_swagger", found[0].msg)
 
     def test_admin_link_with_or_without_trailing_slash_is_fine(self):
         # The admin is mounted at "api/__hidden_admin/"; the link has no slash (APPEND_SLASH redirects).
         self.assertTrue(views.dev_dashboard_setting["admin_url"].endswith("admin"))
-        self.assertNotIn("dev_dashboard.W006", self.ids())
+        self.assertNotIn("dev_dashboard.W005", self.ids())
 
     def test_missing_request_context_processor(self):
         from django.conf import settings

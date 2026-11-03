@@ -163,7 +163,7 @@ serves the first four for you.
 
 | Key | What uses it | Quick start value |
 |---|---|---|
-| `dashboard_url` | the dashboard itself, its login and logout | `api/__hidden_dev_dashboard` |
+| `dashboard_url` | where `all_urls` mounts the dashboard, its login and logout | `api/__hidden_dev_dashboard` |
 | `jwt_token_url` | the **JWT Login** button | `api/auth/token` |
 | `jwt_refresh_url` | the token refresh on every dashboard visit | `api/auth/token/refresh` |
 | `jwt_verify_url` | the token check after each login or refresh | `api/auth/token/verify` |
@@ -175,8 +175,9 @@ A link whose key is missing is hidden. If you leave out `DEV_DASHBOARD_SETTINGS`
 dashboard uses `api/__hidden_dev_dashboard`, `api/auth/token…` as above, plus `api/__hidden_admin`,
 `api/__hidden_swagger` and `api/__hidden_redoc` for the three links.
 
-`JWT_3RD_PREFIX` belongs to django-simple-3rd-party-jwt and must not be empty: the Google and Microsoft
-buttons call `/<JWT_3RD_PREFIX>/auth/...`.
+`JWT_3RD_PREFIX` belongs to django-simple-3rd-party-jwt and decides where its Google and Microsoft routes
+live. The dashboard's pages find those routes, and their own, by URL name, so they follow wherever the
+routes are mounted.
 
 ### Startup checks
 
@@ -188,12 +189,11 @@ and a project that does not serve the dashboard (say, only while `DEBUG` is on) 
 |---|---|
 | `dev_dashboard.W001` | `django_simple_third_party_jwt` is not in `INSTALLED_APPS` |
 | `dev_dashboard.W002` | the `django.template.context_processors.request` context processor is missing |
-| `dev_dashboard.W003` | the dashboard is served somewhere other than `dashboard_url` |
-| `dev_dashboard.W004` | a Simple JWT URL is missing from the settings or nothing serves it |
-| `dev_dashboard.W005` | the Google and Microsoft routes are not served, or `JWT_3RD_PREFIX` is empty |
-| `dev_dashboard.W006` | the Admin, Swagger or Redoc link points at a page nothing serves |
+| `dev_dashboard.W003` | a Simple JWT URL is missing from the settings or nothing serves it |
+| `dev_dashboard.W004` | the Google and Microsoft routes (`django_simple_third_party_jwt.urls`) are not included |
+| `dev_dashboard.W005` | the Admin, Swagger or Redoc link points at a page nothing serves |
 
-Silence one you do not care about with `SILENCED_SYSTEM_CHECKS = ["dev_dashboard.W006"]`.
+Silence one you do not care about with `SILENCED_SYSTEM_CHECKS = ["dev_dashboard.W005"]`.
 
 ### Google and Microsoft login
 

@@ -18,12 +18,15 @@
     {% block extra_head %}{% endblock %}
 </head>
 
+{# Links come from the URLconf by name, so they follow wherever the routes are mounted. #}
+{# The "as" form leaves the variable empty instead of failing when a route is not included. #}
+{% url "google-token" as google_token_url %}{% url "microsoft-signin" as microsoft_signin_url %}
 <body class="dd"
-      data-dashboard-url="/{{ dashboard_url }}"
+      data-dashboard-url="{% url 'dev-dashboard' %}"
       data-jwt-token-url="/{{ jwt_token_url }}"
       data-jwt-refresh-url="/{{ jwt_refresh_url }}"
       data-jwt-verify-url="/{{ jwt_verify_url }}"
-      data-third-party-jwt-url="/{{ third_party_jwt_url }}">
+      data-google-token-url="{{ google_token_url }}">
     <header class="dd-topbar">
         <div class="dd-topbar__inner">
             <a class="dd-brand" href="{% url 'dev-dashboard' %}">
@@ -58,7 +61,7 @@
             <div class="dd-account">
                 {% if request.user.is_authenticated %}
                 <span class="dd-user"><span class="dd-avatar" aria-hidden="true">{{ request.user.get_username|first|upper }}</span><span class="dd-user__hello">Hello {{ request.user }}</span></span>
-                <a class="dd-btn dd-btn--sm" href="/{{ dashboard_url }}/logout">Session Logout</a>
+                <a class="dd-btn dd-btn--sm" href="{% url 'dev-session-logout' %}">Session Logout</a>
                 {% endif %}
                 <button type="button" class="dd-btn dd-btn--sm" onclick="logout()">JWT Logout</button>
             </div>
@@ -81,13 +84,17 @@
             <section class="dd-card" aria-labelledby="dd-third-party-title">
                 <div class="dd-card__head"><h2 id="dd-third-party-title">Third-party login</h2></div>
                 <p class="dd-card__sub">Google and Microsoft answer with a JWT from django-simple-3rd-party-jwt.</p>
+                {% if google_token_url and microsoft_signin_url %}
                 <div class="dd-providers">
                     <div id="g_id_onload" data-client_id="{{ social_google_client_id }}" data-callback="get_jwt_using_google_credential"></div>
                     <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
-                    <button type="button" id="microsoft-login-button" onclick="location.href='/{{ third_party_jwt_url }}/auth/microsoft/signin';">
+                    <button type="button" id="microsoft-login-button" onclick="location.href='{{ microsoft_signin_url }}';">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" alt="Microsoft logo" width="20" height="20"> Login with Microsoft
                     </button>
                 </div>
+                {% else %}
+                <p class="dd-alert dd-alert--error">Not available: this project does not include <code>django_simple_third_party_jwt.urls</code>.</p>
+                {% endif %}
             </section>
             {% endblock %}
         </aside>

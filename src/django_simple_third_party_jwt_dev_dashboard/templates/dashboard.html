@@ -43,7 +43,7 @@
     {% if request.user.is_superuser %}<span class="dd-badge">superuser</span>{% elif request.user.is_staff %}<span class="dd-badge">staff</span>{% endif %}
   </p>
   <div class="dd-actions">
-    <a class="dd-btn" href="/{{ dashboard_url }}/logout">Session Logout</a>
+    <a class="dd-btn" href="{% url 'dev-session-logout' %}">Session Logout</a>
   </div>
   {% else %}
   <p class="dd-session__who dd-muted">No session login yet.</p>
@@ -80,8 +80,8 @@
     <li><span class="dd-method">POST</span><code>/{{ jwt_token_url }}</code><span class="dd-what">JWT Login (Simple JWT)</span></li>
     <li><span class="dd-method">POST</span><code>/{{ jwt_refresh_url }}</code><span class="dd-what">refresh, on every visit</span></li>
     <li><span class="dd-method">POST</span><code>/{{ jwt_verify_url }}</code><span class="dd-what">verify, after each login</span></li>
-    <li><span class="dd-method">POST</span><code>/{{ third_party_jwt_url }}/auth/google/token</code><span class="dd-what">Google credential to JWT</span></li>
-    <li><span class="dd-method">GET</span><code>/{{ third_party_jwt_url }}/auth/microsoft/signin</code><span class="dd-what">Microsoft sign-in</span></li>
+    {% if google_token_url %}<li><span class="dd-method">POST</span><code>{{ google_token_url }}</code><span class="dd-what">Google credential to JWT</span></li>{% endif %}
+    {% if microsoft_signin_url %}<li><span class="dd-method">GET</span><code>{{ microsoft_signin_url }}</code><span class="dd-what">Microsoft sign-in</span></li>{% endif %}
   </ul>
 </section>
 {% endblock %}

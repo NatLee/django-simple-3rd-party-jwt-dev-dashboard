@@ -230,14 +230,14 @@ function refresh_stored_token() {
 // JWT from django-simple-third-party-jwt, keep it, and verify it.
 function get_jwt_using_google_credential(response) {
   dd_notice("Checking your Google account…", "info");
-  return dd_post(dd_url("third-party-jwt-url") + "/auth/google/token", { credential: response.credential }).then(function (data) {
+  return dd_post(dd_url("google-token-url"), { credential: response.credential }).then(function (data) {
     localStorage.setItem("access_token", data.access);
     localStorage.setItem("refresh_token", data.refresh_token || data.refresh);
     console.log("Google Login");
     dd_notice("", "info");
     if (document.getElementById("token")) return show_verified_token(data.access, "3rd party login!");
     dd_set_flash("3rd party login!");
-    window.location.href = dd_url("dashboard-url") + "/";
+    window.location.href = dd_url("dashboard-url");
   }, function (xhr) {
     dd_notice("Google login did not work. The server said: " + dd_error_text(xhr), "error");
   });

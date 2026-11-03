@@ -1,12 +1,14 @@
 """What the redesigned pages promise: states, assets, and the parts that overriding templates rely on."""
 import re
+import types
 from importlib.metadata import requires
 from pathlib import Path
 from unittest import mock
 
 from django.contrib.auth.models import User
 from django.template import engines
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
+from django.urls import include, path
 
 from django_simple_third_party_jwt_dev_dashboard import __version__, views
 
@@ -57,6 +59,40 @@ class StateTests(TestCase):
 
     def test_current_page_is_marked_in_the_navbar(self):
         self.assertContains(self.client.get(LOGIN), 'href="%s" aria-current="page"' % LOGIN)
+
+
+class LinkTests(TestCase):
+    """Links come from the URLconf by name, not from a copy of its layout."""
+
+    def urlconf(self, *patterns):
+        module = types.ModuleType("made_up_urls")
+        module.urlpatterns = list(patterns)
+        return module
+
+    def test_links_follow_the_routes_wherever_they_are_mounted(self):
+        moved = self.urlconf(
+            path("dev/", include("django_simple_third_party_jwt_dev_dashboard.urls")),
+            path("sso/", include("django_simple_third_party_jwt.urls")),
+        )
+        with override_settings(ROOT_URLCONF=moved):
+            User.objects.create_user("alice", password="s3cret-pass")
+            self.client.login(username="alice", password="s3cret-pass")
+            html = self.client.get("/dev/").content.decode()
+
+        self.assertIn('data-dashboard-url="/dev/"', html)
+        self.assertIn('href="/dev/logout"', html)
+        self.assertIn('data-google-token-url="/sso/api/auth/google/token"', html)
+        self.assertIn("location.href='/sso/api/auth/microsoft/signin'", html)
+        self.assertIn("<code>/sso/api/auth/google/token</code>", html)
+
+    def test_without_the_base_package_routes_the_buttons_are_replaced_by_a_note(self):
+        alone = self.urlconf(path("dev/", include("django_simple_third_party_jwt_dev_dashboard.urls")))
+        with override_settings(ROOT_URLCONF=alone):
+            response = self.client.get("/dev/")
+
+        self.assertContains(response, "Not available: this project does not include")
+        self.assertNotContains(response, 'id="microsoft-login-button"')
+        self.assertNotContains(response, 'class="g_id_signin"')
 
 
 class LoginFormTests(TestCase):
