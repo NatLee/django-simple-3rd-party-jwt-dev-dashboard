@@ -13,19 +13,11 @@ from django.views.decorators.csrf import csrf_exempt
 
 from django_simple_third_party_jwt import settings as jwt_settings
 from django_simple_third_party_jwt_dev_dashboard import __version__
-from django_simple_third_party_jwt_dev_dashboard.settings import DEV_DASHBOARD_SETTINGS
+from django_simple_third_party_jwt_dev_dashboard.settings import DEFAULT_DEV_DASHBOARD_SETTINGS, DEV_DASHBOARD_SETTINGS
 
-# Paths the templates link to or call from JavaScript, taken from DEV_DASHBOARD_SETTINGS.
-# A missing key becomes "", which hides the matching navbar link.
-URL_SETTING_KEYS = (
-    "jwt_token_url",
-    "jwt_refresh_url",
-    "jwt_verify_url",
-    "dashboard_url",
-    "admin_url",
-    "swagger_url",
-    "redoc_url",
-)
+# Paths the templates link to or call from JavaScript: every DEV_DASHBOARD_SETTINGS key.
+# A key the project leaves out becomes "", which hides the matching navbar link.
+URL_SETTING_KEYS = tuple(DEFAULT_DEV_DASHBOARD_SETTINGS)
 
 # Template context shared by every page, built once when Django imports the views.
 dev_dashboard_setting = {

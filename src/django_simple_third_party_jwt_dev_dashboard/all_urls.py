@@ -16,17 +16,9 @@ The Admin, Swagger and Redoc links are not served here: they point at pages your
 serves itself, so set ``admin_url`` to wherever your admin lives.
 """
 from django.urls import include, path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+from django.utils.module_loading import import_string
 
-from django_simple_third_party_jwt_dev_dashboard.settings import DEV_DASHBOARD_SETTINGS
-
-# (DEV_DASHBOARD_SETTINGS key, Simple JWT view, URL name); the names match the README's
-# hand-written urls.py, so code that reverses them keeps working after switching to this module.
-SIMPLE_JWT_ROUTES = (
-    ("jwt_token_url", TokenObtainPairView, "token_get"),
-    ("jwt_refresh_url", TokenRefreshView, "token_refresh"),
-    ("jwt_verify_url", TokenVerifyView, "token_verify"),
-)
+from django_simple_third_party_jwt_dev_dashboard.settings import DEV_DASHBOARD_SETTINGS, SIMPLE_JWT_URLS
 
 urlpatterns = [
     # Google and Microsoft login, under /<JWT_3RD_PREFIX>/auth/
@@ -39,7 +31,7 @@ if DEV_DASHBOARD_SETTINGS.get("dashboard_url"):
     )
 
 urlpatterns += [
-    path(DEV_DASHBOARD_SETTINGS[key], view.as_view(), name=name)
-    for key, view, name in SIMPLE_JWT_ROUTES
+    path(DEV_DASHBOARD_SETTINGS[key], import_string(route.view).as_view(), name=route.url_name)
+    for key, route in SIMPLE_JWT_URLS.items()
     if DEV_DASHBOARD_SETTINGS.get(key)
 ]

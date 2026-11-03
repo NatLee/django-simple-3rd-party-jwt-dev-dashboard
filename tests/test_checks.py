@@ -10,6 +10,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from django_simple_third_party_jwt_dev_dashboard import views
 from django_simple_third_party_jwt_dev_dashboard.checks import check_dashboard_setup
+from django_simple_third_party_jwt_dev_dashboard.settings import DEFAULT_DEV_DASHBOARD_SETTINGS, SIMPLE_JWT_URLS
 
 
 def urlconf(*patterns):
@@ -70,6 +71,15 @@ class StartupCheckTests(SimpleTestCase):
         self.assertEqual([m.id for m in found], ["dev_dashboard.W003"])
         self.assertIn("'jwt_verify_url'", found[0].msg)
 
+    def test_hint_suggests_the_default_path_of_the_missing_key(self):
+        # It used to suggest "api/auth/token" for all three keys.
+        for key in SIMPLE_JWT_URLS:
+            with mock.patch.dict(views.dev_dashboard_setting, {key: ""}):
+                (found,) = check_dashboard_setup()
+
+            self.assertIn(repr(DEFAULT_DEV_DASHBOARD_SETTINGS[key]), found.hint, key)
+            self.assertIn(SIMPLE_JWT_URLS[key].view.rsplit(".", 1)[-1], found.hint, key)
+
     def test_google_and_microsoft_routes_not_served(self):
         with override_settings(ROOT_URLCONF=urlconf(DASHBOARD_URLS, ADMIN, *SIMPLE_JWT)):
             found = check_dashboard_setup()
@@ -90,6 +100,8 @@ class StartupCheckTests(SimpleTestCase):
 
         self.assertEqual([m.id for m in found], ["dev_dashboard.W005"])
         self.assertIn("Swagger link goes to /api/__hidden_swagger", found[0].msg)
+        for key in ("admin_url", "swagger_url", "redoc_url"):
+            self.assertIn(DEFAULT_DEV_DASHBOARD_SETTINGS[key], found[0].hint)
 
     def test_admin_link_with_or_without_trailing_slash_is_fine(self):
         # The admin is mounted at "api/__hidden_admin/"; the link has no slash (APPEND_SLASH redirects).
