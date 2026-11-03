@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    name: Python ${{ matrix.python }} / ${{ matrix.deps }} dependencies${{ matrix.extra && format(' + [{0}]', matrix.extra) || '' }}
+    name: Python ${{ matrix.python }} / ${{ matrix.deps }} dependencies${{ matrix.factor && format(' + {0}', matrix.factor) || '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -25,11 +25,15 @@ jobs:
           # on the oldest Python that python_requires allows
           - python: "3.8"
             deps: "lowest"
-          # this extends the 3.14 job: it also installs the optional [docs] extra (drf-yasg),
-          # every other job runs without it
+          # "factor" picks a tox env variant (see tox.ini) and extends that Python's job:
+          # 3.14 also installs the optional [docs] extra (drf-yasg), the others run without it;
+          # 3.13 runs against django-simple-third-party-jwt's unreleased main, until it is released.
           - python: "3.14"
             deps: "latest"
-            extra: "docs"
+            factor: "docs"
+          - python: "3.13"
+            deps: "latest"
+            factor: "jwtmain"
 
     steps:
       - uses: actions/checkout@v4
@@ -59,8 +63,8 @@ jobs:
           cat "$RUNNER_TEMP/constraints.txt"
           echo "PIP_CONSTRAINT=$RUNNER_TEMP/constraints.txt" >> "$GITHUB_ENV"
       - name: Run tests
-        # Runs tox with the Python version on PATH, plus the extra if the job has one (py-docs)
-        run: tox -e py${{ matrix.extra && format('-{0}', matrix.extra) || '' }}
+        # Runs tox with the Python version on PATH, plus the job's factor if it has one (py-docs)
+        run: tox -e py${{ matrix.factor && format('-{0}', matrix.factor) || '' }}
 
   package:
     # Build the sdist and wheel the same way the release workflow does, and validate the metadata.
