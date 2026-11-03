@@ -31,6 +31,14 @@ class ExampleProjectTests(SimpleTestCase):
         result = run_example("check")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        # The dashboard's own startup checks find nothing to complain about either.
+        self.assertIn("System check identified no issues", result.stdout, result.stderr)
+
+    def test_example_uses_the_one_line_urls_setup(self):
+        text = EXAMPLE_URLS.read_text(encoding="utf-8")
+
+        self.assertIn('include("django_simple_third_party_jwt_dev_dashboard.all_urls")', text)
+        self.assertIn('path("admin/", admin.site.urls)', text)
 
     def test_example_urls_compile_without_warnings(self):
         # Python 3.12+ prints a SyntaxWarning for invalid escapes such as "\." in a
