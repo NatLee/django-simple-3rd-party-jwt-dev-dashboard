@@ -2,13 +2,12 @@
 {% block title %}Dev Dashboard{% endblock %}
 
 {% block content %}
-<!-- Jumbotron for Main Heading -->
 <div class="jumbotron text-center">
   <h1 class="display-4">Dev Dashboard</h1>
   <p class="lead">Welcome to your dashboard.</p>
 </div>
 
-<!-- Client IDs Section -->
+<!-- Client IDs from django-simple-third-party-jwt's settings -->
 <div class="container mb-4">
   <h2>Google Client ID</h2>
   <div class="alert alert-info">{{ social_google_client_id }}</div>
@@ -19,7 +18,7 @@
   </div>
 </div>
 
-<!-- JWT and Session Fields -->
+<!-- What the browser and the server know about this visitor -->
 <div class="container">
   <h2>JWT Field</h2>
   <div class="alert alert-secondary" id="token"></div>
@@ -35,54 +34,24 @@
   {% endif %}
 </div>
 
-
 <script>
+  // On every visit: if the browser keeps a JWT, refresh it, then verify and show the new one.
   var jwt_token = localStorage.getItem("access_token");
   var jwt_token_refresh = localStorage.getItem("refresh_token");
 
   if (jwt_token) {
-    // 測試 JWT refresh API是否有效
     $.ajax({
       type: "POST",
       url: "/{{ jwt_refresh_url }}",
-      data: {
-        refresh: jwt_token_refresh,
-      },
+      data: { refresh: jwt_token_refresh },
       success: function (data) {
         localStorage.setItem("access_token", data.access);
-        const jwt_token = data.access;
-        // 測試 JWT verify API是否有效
-        $.ajax({
-          type: "POST",
-          url: "/{{ jwt_verify_url }}",
-          data: { token: jwt_token },
-          headers: {
-            Authorization: "Bearer" + " " + jwt_token,
-          },
-          success: function (data) {
-            var json_string = JSON.stringify(data, null, 2);
-            console.log(data);
-            $("#token").text("Bearer " + jwt_token);
-            $("#token").css("color", "green");
-            if (json_string) {
-              $("#result").text(" Token verified successfully!");
-            }
-            $("#result").css("color", "blue").css("white-space", "pre-line");
-          },
-          error: function (data) {
-            var result = "please login " + data.responseText;
-            $("#result").text(result).css("color", "red");
-          },
-        });
+        show_verified_token(data.access, "");
       },
-      error: function (data) {
-        var result = "please login " + data.responseText;
-        $("#result").text(result).css("color", "red");
-      },
+      error: show_login_error,
     });
   } else {
     $("#token").text("Have not login with JWT token!");
   }
 </script>
-
 {% endblock %}

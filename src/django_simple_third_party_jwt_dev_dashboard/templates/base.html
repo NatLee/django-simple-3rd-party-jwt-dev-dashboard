@@ -6,18 +6,60 @@
     <meta name="google-signin-scope" content="profile email">
     <meta name="google-signin-client_id" content="{{ social_google_client_id }}">
     <title>{% block title %}{% endblock %}</title>
-    
-    <!-- Bootstrap CSS -->
+
     {% bootstrap_css %}
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/fontawesome.min.css">
-    
-    <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
-    
-    <!-- Google Sign-in -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <script>
+        // Show "please login" and the server's answer in the JWT result box.
+        function show_login_error(xhr) {
+            $("#result").text("please login " + xhr.responseText).css("color", "red");
+        }
+
+        // Ask the verify URL about an access token; if it is valid, show it in the JWT field.
+        // `message` goes in front of "Token verified successfully!".
+        function show_verified_token(access_token, message) {
+            $.ajax({
+                type: "POST",
+                url: "/{{ jwt_verify_url }}",
+                data: { token: access_token },
+                headers: { Authorization: "Bearer " + access_token },
+                success: function (data) {
+                    console.log(data);
+                    $("#token").text("Bearer " + access_token).css("color", "green");
+                    var result = message;
+                    if (JSON.stringify(data, null, 2)) {
+                        result += " Token verified successfully!";
+                    }
+                    $("#result").text(result).css("color", "blue").css("white-space", "pre-line");
+                },
+                error: show_login_error,
+            });
+        }
+
+        // Called by Google Sign-In (see data-callback below): trade the Google credential
+        // for a JWT from django-simple-third-party-jwt, keep it, and verify it.
+        function get_jwt_using_google_credential(response) {
+            $.ajax({
+                method: "POST",
+                url: "/{{ third_party_jwt_url }}/auth/google/token",
+                data: { credential: response.credential },
+            }).done(function (data) {
+                localStorage.setItem("access_token", data.access);
+                localStorage.setItem("refresh_token", data.refresh_token);
+                console.log("Google Login");
+                show_verified_token(data.access, "3rd party login!");
+            });
+        }
+
+        // "JWT Logout": forget the tokens kept in the browser.
+        function logout() {
+            window.localStorage.removeItem("access_token");
+            window.localStorage.removeItem("refresh_token");
+            window.location.href = "/{{ dashboard_url }}";
+        }
+    </script>
 </head>
 
 <body>
@@ -27,7 +69,6 @@
                 <a class="navbar-brand" href="{% url 'dev-dashboard' %}">Dev</a>
             </div>
             <ul class="nav navbar-nav navbar-right">
-                <!-- Dynamic Links -->
                 {% if admin_url %}
                 <li><a href="/{{ admin_url }}"><span class="glyphicon glyphicon-log-in"></span> Admin</a></li>
                 {% endif %}
@@ -37,17 +78,15 @@
                 {% if redoc_url %}
                 <li><a href="/{{ redoc_url }}"><span class="glyphicon glyphicon-log-in"></span> Redoc</a></li>
                 {% endif %}
-                
-                <!-- Login/Logout Buttons -->
-                <li><a href="{% url 'dev-session-login' %}"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
 
+                <li><a href="{% url 'dev-session-login' %}"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
                 {% if request.user.is_authenticated %}
                 <li><a href="#"><span class="glyphicon glyphicon-user"></span> Hello {{ request.user }}</a></li>
                 <li><a href="/{{ dashboard_url }}/logout"><span class="glyphicon glyphicon-log-out"></span> Session Logout</a></li>
                 {% endif %}
                 <li><a href="#" onclick="logout()"><span class="glyphicon glyphicon-log-out"></span> JWT Logout</a></li>
 
-                <!-- Third-party Logins -->
+                <!-- Third-party logins, served by django-simple-third-party-jwt -->
                 <li>
                     <div id="g_id_onload" data-client_id="{{ social_google_client_id }}" data-callback="get_jwt_using_google_credential"></div>
                     <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
@@ -65,57 +104,5 @@
         {% block content %}
         {% endblock %}
     </div>
-
 </body>
-
-<script>
-    function get_jwt_using_google_credential(data) {
-        const credential = data.credential;
-        $.ajax({
-            method: "POST",
-            url: "/{{ third_party_jwt_url }}/auth/google/token",
-            data: { credential: credential }
-        }).done(function (data) {
-            const access_token = data.access;
-            const refresh_token = data.refresh_token;
-            localStorage.setItem('access_token', access_token);
-            localStorage.setItem('refresh_token', refresh_token);
-            console.log('Google Login');
-            $.ajax({
-                type: "POST",
-                url: "/{{ jwt_verify_url }}",
-                data: {"token":access_token},
-                headers: {
-                    "Authorization": "Bearer" + " " + access_token
-                },
-                success: function (data) {
-                    var json_string = JSON.stringify(data, null, 2);
-                    console.log(data);
-                    $('#token').text('Bearer ' + access_token);
-                    $('#token').css('color', 'green');
-                    $('#result').text('3rd party login!');
-                    if(json_string){
-                        $('#result').append(" Token verified successfully!");
-                    }
-                    $('#result').css('color', 'blue').css('white-space', 'pre-line');
-                },
-                error: function (data) {
-                    var result = "please login " + data.responseText;
-                    $("#result").text(result).css('color', 'red');
-                }
-            });
-        });
-    }
-</script>
-
-
-<script>
-    function logout() {
-      window.localStorage.removeItem("access_token");
-      window.localStorage.removeItem("refresh_token");
-      window.location.href = "/{{ dashboard_url }}";
-    }
-</script>
-
-
 </html>
