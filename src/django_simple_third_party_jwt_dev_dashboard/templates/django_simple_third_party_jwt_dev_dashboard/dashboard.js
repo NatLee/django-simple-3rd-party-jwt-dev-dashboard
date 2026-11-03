@@ -1,16 +1,31 @@
 // Dev dashboard JavaScript, shared by every page. base.html includes this file inline.
 //
-// The paths come from data-* attributes on <body>, which base.html fills from
-// DEV_DASHBOARD_SETTINGS. Tokens live in localStorage under "access_token" and "refresh_token",
-// the keys django-simple-third-party-jwt's Microsoft login also writes.
+// Paths and storage keys come from data-* attributes on <body>, which base.html fills from the
+// URLconf, DEV_DASHBOARD_SETTINGS and django-simple-third-party-jwt's settings.
 //
 // show_login_error(), show_verified_token(), get_jwt_using_google_credential() and logout()
 // keep the names and arguments they had in earlier versions, so templates that override
 // dashboard.html or login.html and call them keep working. Plain JavaScript: no library is loaded.
 
-function dd_url(name) {
+function dd_config(name) {
   return document.body.getAttribute("data-" + name) || "";
 }
+
+// The tokens live in localStorage under the keys django-simple-third-party-jwt's Microsoft login
+// writes them to (its MICROSOFT_JWT_REDIRECT_*_TOKEN_KEY settings), so every login shows up here.
+var dd_tokens = {
+  access: function () { return localStorage.getItem(dd_config("access-token-key")); },
+  refresh: function () { return localStorage.getItem(dd_config("refresh-token-key")); },
+  // A refresh answer brings a new refresh token only with Simple JWT's ROTATE_REFRESH_TOKENS.
+  save: function (access, refresh) {
+    localStorage.setItem(dd_config("access-token-key"), access);
+    if (refresh) localStorage.setItem(dd_config("refresh-token-key"), refresh);
+  },
+  clear: function () {
+    localStorage.removeItem(dd_config("access-token-key"));
+    localStorage.removeItem(dd_config("refresh-token-key"));
+  }
+};
 
 // POST form fields; resolve with the JSON answer, or reject with { status, responseText }
 // (the fields show_login_error() has always read from its argument).
@@ -199,7 +214,7 @@ function show_login_error(xhr) {
 // `message` goes in front of "Token verified successfully!".
 function show_verified_token(access_token, message) {
   dd_set_jwt_state("checking");
-  return dd_post(dd_url("jwt-verify-url"), { token: access_token }, access_token).then(function () {
+  return dd_post(dd_config("jwt-verify-url"), { token: access_token }, access_token).then(function () {
     dd_show_token(access_token);
     dd_set_jwt_state("verified");
     dd_set_result((message ? message + " " : "") + "Token verified successfully!", "ok");
@@ -208,8 +223,8 @@ function show_verified_token(access_token, message) {
 
 // On every dashboard visit: if the browser keeps a JWT, refresh it, then verify and show the new one.
 function refresh_stored_token() {
-  var access = localStorage.getItem("access_token");
-  var refresh = localStorage.getItem("refresh_token");
+  var access = dd_tokens.access();
+  var refresh = dd_tokens.refresh();
   var flash = dd_take_flash();
   if (!access) {
     dd_set_jwt_state("none");
@@ -218,10 +233,8 @@ function refresh_stored_token() {
     return Promise.resolve();
   }
   dd_set_jwt_state("checking");
-  return dd_post(dd_url("jwt-refresh-url"), { refresh: refresh || "" }).then(function (data) {
-    localStorage.setItem("access_token", data.access);
-    // With Simple JWT's ROTATE_REFRESH_TOKENS the answer brings a new refresh token too.
-    if (data.refresh) localStorage.setItem("refresh_token", data.refresh);
+  return dd_post(dd_config("jwt-refresh-url"), { refresh: refresh || "" }).then(function (data) {
+    dd_tokens.save(data.access, data.refresh);
     return show_verified_token(data.access, flash);
   }, show_login_error);
 }
@@ -230,14 +243,12 @@ function refresh_stored_token() {
 // JWT from django-simple-third-party-jwt, keep it, and verify it.
 function get_jwt_using_google_credential(response) {
   dd_notice("Checking your Google account…", "info");
-  return dd_post(dd_url("google-token-url"), { credential: response.credential }).then(function (data) {
-    localStorage.setItem("access_token", data.access);
-    localStorage.setItem("refresh_token", data.refresh_token || data.refresh);
-    console.log("Google Login");
+  return dd_post(dd_config("google-token-url"), { credential: response.credential }).then(function (data) {
+    dd_tokens.save(data.access, data.refresh);
     dd_notice("", "info");
     if (document.getElementById("token")) return show_verified_token(data.access, "3rd party login!");
     dd_set_flash("3rd party login!");
-    window.location.href = dd_url("dashboard-url");
+    window.location.href = dd_config("dashboard-url");
   }, function (xhr) {
     dd_notice("Google login did not work. The server said: " + dd_error_text(xhr), "error");
   });
@@ -245,9 +256,8 @@ function get_jwt_using_google_credential(response) {
 
 // "JWT Logout": forget the tokens kept in the browser.
 function logout() {
-  window.localStorage.removeItem("access_token");
-  window.localStorage.removeItem("refresh_token");
-  window.location.href = dd_url("dashboard-url");
+  dd_tokens.clear();
+  window.location.href = dd_config("dashboard-url");
 }
 
 // Copy text to the clipboard and say so on the button for a moment.
@@ -275,16 +285,11 @@ function copy_text(text, button) {
 
 // The login form has two submit buttons. "JWT Login" posts to Simple JWT's token URL and keeps
 // the tokens in the browser; "Session Login" is a normal form post to the dashboard's login view.
-// The pressed button comes from the submit event (or the last click), so the Enter key works too.
+// The pressed button is the submit event's submitter; the Enter key submits with the first one.
 function bind_login_form(form) {
   if (!form) return;
-  var clicked = null;
-  Array.prototype.forEach.call(form.querySelectorAll("button[type=submit]"), function (button) {
-    button.addEventListener("click", function () { clicked = button; });
-  });
   form.addEventListener("submit", function (event) {
-    var button = event.submitter || clicked || form.querySelector("button[type=submit]");
-    clicked = null;
+    var button = event.submitter;
     if (!button || button.value !== "jwt") return;
     event.preventDefault();
     var error = document.getElementById("login-error");
@@ -295,10 +300,9 @@ function bind_login_form(form) {
     });
     button.setAttribute("aria-busy", "true");
     button.disabled = true;
-    dd_post(dd_url("jwt-token-url"), fields).then(function (data) {
-      localStorage.setItem("refresh_token", data.refresh);
-      localStorage.setItem("access_token", data.access);
-      window.location.href = dd_url("dashboard-url");
+    dd_post(dd_config("jwt-token-url"), fields).then(function (data) {
+      dd_tokens.save(data.access, data.refresh);
+      window.location.href = dd_config("dashboard-url");
     }, function (xhr) {
       button.removeAttribute("aria-busy");
       button.disabled = false;

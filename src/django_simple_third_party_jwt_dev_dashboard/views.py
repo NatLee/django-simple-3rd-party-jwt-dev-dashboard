@@ -32,6 +32,9 @@ dev_dashboard_setting = {
     "social_google_client_id": jwt_settings.SOCIAL_GOOGLE_CLIENT_ID,
     "social_microsoft_client_id": jwt_settings.SOCIAL_MICROSOFT_CLIENT_ID,
     "third_party_jwt_url": jwt_settings.JWT_3RD_PREFIX,
+    # localStorage keys for the tokens: the base package's Microsoft login writes to these.
+    "access_token_key": jwt_settings.MICROSOFT_JWT_REDIRECT_ACCESS_TOKEN_KEY,
+    "refresh_token_key": jwt_settings.MICROSOFT_JWT_REDIRECT_REFRESH_TOKEN_KEY,
     **{key: DEV_DASHBOARD_SETTINGS.get(key, "") for key in URL_SETTING_KEYS},
     "debug": django_settings.DEBUG,
     "dashboard_version": __version__,

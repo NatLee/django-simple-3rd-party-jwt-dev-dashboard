@@ -95,6 +95,34 @@ class LinkTests(TestCase):
         self.assertNotContains(response, 'class="g_id_signin"')
 
 
+class TokenStorageTests(TestCase):
+    """The tokens go where django-simple-third-party-jwt's Microsoft login puts them."""
+
+    def test_storage_keys_come_from_the_base_package(self):
+        from django_simple_third_party_jwt import settings as jwt_settings
+
+        self.assertEqual(views.dev_dashboard_setting["access_token_key"], jwt_settings.MICROSOFT_JWT_REDIRECT_ACCESS_TOKEN_KEY)
+        self.assertEqual(views.dev_dashboard_setting["refresh_token_key"], jwt_settings.MICROSOFT_JWT_REDIRECT_REFRESH_TOKEN_KEY)
+
+    def test_pages_pass_the_keys_to_the_script(self):
+        keys = {"access_token_key": "my_access", "refresh_token_key": "my_refresh"}
+        with mock.patch.dict(views.dev_dashboard_setting, keys):
+            response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, 'data-access-token-key="my_access"')
+        self.assertContains(response, 'data-refresh-token-key="my_refresh"')
+
+    def test_script_has_no_storage_keys_of_its_own(self):
+        script = (PACKAGE / "templates" / "django_simple_third_party_jwt_dev_dashboard" / "dashboard.js").read_text("utf-8")
+
+        self.assertNotIn('"access_token"', script)
+        self.assertNotIn('"refresh_token"', script)
+        # Only the dd_tokens object reads or writes localStorage.
+        start = script.index("var dd_tokens")
+        outside = script[:start] + script[script.index("\n};\n", start):]
+        self.assertNotIn("localStorage.", outside)
+
+
 class LoginFormTests(TestCase):
     def test_session_login_is_a_plain_form_post_to_the_login_view(self):
         # It works without JavaScript; only JWT Login needs it.

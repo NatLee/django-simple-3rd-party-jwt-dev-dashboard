@@ -26,7 +26,9 @@
       data-jwt-token-url="/{{ jwt_token_url }}"
       data-jwt-refresh-url="/{{ jwt_refresh_url }}"
       data-jwt-verify-url="/{{ jwt_verify_url }}"
-      data-google-token-url="{{ google_token_url }}">
+      data-google-token-url="{{ google_token_url }}"
+      data-access-token-key="{{ access_token_key }}"
+      data-refresh-token-key="{{ refresh_token_key }}">
     <header class="dd-topbar">
         <div class="dd-topbar__inner">
             <a class="dd-brand" href="{% url 'dev-dashboard' %}">

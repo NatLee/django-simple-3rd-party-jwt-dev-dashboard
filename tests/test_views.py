@@ -40,7 +40,7 @@ class DashboardPageTests(TestCase):
 
         # The Google button's JavaScript posts to data-google-token-url.
         self.assertContains(response, 'data-google-token-url="%s"' % reverse("google-token"))
-        self.assertContains(response, 'dd_url("google-token-url")')
+        self.assertContains(response, 'dd_config("google-token-url")')
         self.assertContains(response, "location.href='%s'" % reverse("microsoft-signin"))
 
 
