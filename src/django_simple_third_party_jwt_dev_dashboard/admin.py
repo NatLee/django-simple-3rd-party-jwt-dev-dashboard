@@ -1,3 +1,1 @@
-from django.contrib import admin
-
-# Register your models here.
+"""The dashboard registers nothing in the Django admin."""
