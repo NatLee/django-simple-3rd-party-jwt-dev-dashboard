@@ -163,7 +163,15 @@ And visit `http://localhost:8000/api/__hidden_dev_dashboard`
 
 ## Example
 
-Check `./example/django_simple_third_party_jwt_dev_dashboard_example/`.
+Check `./example/django_simple_third_party_jwt_dev_dashboard_example/`. To run it:
+
+```bash
+cd example/django_simple_third_party_jwt_dev_dashboard_example
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver 0.0.0.0:8000
+```
 
 ## More
 

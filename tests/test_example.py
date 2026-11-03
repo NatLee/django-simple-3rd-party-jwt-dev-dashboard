@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import warnings
 from pathlib import Path
 
 from django.test import SimpleTestCase
@@ -21,3 +22,11 @@ class ExampleProjectTests(SimpleTestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_example_urls_compile_without_warnings(self):
+        # Python 3.12+ prints a SyntaxWarning for invalid escapes such as "\." in a
+        # normal string, on every manage.py command.
+        urls_py = EXAMPLE / "django_simple_third_party_jwt_dev_dashboard_example" / "urls.py"
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            compile(urls_py.read_text(encoding="utf-8"), str(urls_py), "exec")
