@@ -90,8 +90,14 @@
                 <div class="dd-providers">
                     <div id="g_id_onload" data-client_id="{{ social_google_client_id }}" data-callback="get_jwt_using_google_credential"></div>
                     <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+                    {% comment %}
+                    The logo is Microsoft's own file for sign-in buttons (microsoft-logo.svg, unaltered), from
+                    https://learn.microsoft.com/en-us/entra/identity-platform/howto-add-branding-in-apps
+                    Microsoft's guidelines: don't alter the logo, and pair it with "Sign in with Microsoft".
+                    {% endcomment %}
                     <button type="button" id="microsoft-login-button" onclick="location.href='{{ microsoft_signin_url }}';">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" alt="Microsoft logo" width="20" height="20"> Login with Microsoft
+                        <span class="dd-ms-logo" aria-hidden="true">{% include "django_simple_third_party_jwt_dev_dashboard/microsoft-logo.svg" %}</span>
+                        Sign in with Microsoft
                     </button>
                 </div>
                 {% else %}

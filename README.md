@@ -145,7 +145,7 @@ Projects that only use the dashboard as it ships need nothing else. Optional cle
 | JWT login | **JWT Login** (or Enter) on the login page; the tokens go to `localStorage` | Simple JWT |
 | Refresh and verify | every dashboard visit, or **Refresh now**: the token is refreshed, verified and decoded | Simple JWT |
 | Google login | the **Sign in with Google** button | django-simple-3rd-party-jwt |
-| Microsoft login | **Login with Microsoft**, which comes back with a JWT | django-simple-3rd-party-jwt |
+| Microsoft login | **Sign in with Microsoft**, which comes back with a JWT | django-simple-3rd-party-jwt |
 | JWT logout | **JWT Logout** forgets the stored tokens | your browser |
 | Admin, Swagger, Redoc | top bar links, shown while their pages are served | your project; [API docs](#api-docs-swagger-and-redoc) |
 
@@ -169,8 +169,8 @@ This package only brings pages. The work happens in two other places:
   `/<JWT_3RD_PREFIX>/auth/google/token` and `/<JWT_3RD_PREFIX>/auth/microsoft/...`.
 
 The dashboard is a set of buttons wired to those URLs, so you can see the whole flow working in your
-project. Its CSS and plain JavaScript ship inside the package; only Google's Sign-In script and the
-Microsoft logo come from the internet.
+project. Its CSS, plain JavaScript and the Microsoft logo ship inside the package; only Google's Sign-In
+script comes from the internet.
 
 ## Settings
 
@@ -430,3 +430,8 @@ current environment.
 ## License
 
 [MIT](https://github.com/NatLee/django-simple-3rd-party-jwt-dev-dashboard/blob/main/LICENSE)
+
+The Microsoft logo on the sign-in button is Microsoft's trademark. The package ships Microsoft's own file
+for sign-in buttons, unaltered, as its
+[Sign in with Microsoft branding guidelines](https://learn.microsoft.com/en-us/entra/identity-platform/howto-add-branding-in-apps)
+provide it.

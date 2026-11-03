@@ -181,7 +181,7 @@ class AssetTests(TestCase):
 
     def test_included_files_have_no_template_tags(self):
         # base.html includes them as templates; a stray "{%" would break every page.
-        for name in ("dashboard.css", "dashboard.js"):
+        for name in ("dashboard.css", "dashboard.js", "microsoft-logo.svg"):
             text = (TEMPLATES / name).read_text("utf-8")
             self.assertIsNone(re.search(r"\{[{%#]", text), name)
 
