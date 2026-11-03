@@ -1,106 +1,40 @@
-"""URL Configuration
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/4.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-from django.contrib import admin
-from django.urls import path
-
-from django.urls import include
+"""URLs of the example project, the same as the README's `urls.py` section."""
 from django.conf import settings
-
-urlpatterns = []
-
-
-# --------------- 3rd party login
-# app route
-urlpatterns += [
-    path("", include("django_simple_third_party_jwt.urls")),
-]
-# ------------------------------
-
-# --------------- Dashboard
-urlpatterns += [
-    # debug dashboard
-    path(settings.DEV_DASHBOARD_SETTINGS['dashboard_url'] + "/", include("django_simple_third_party_jwt_dev_dashboard.urls")),
-]
-# ------------------------------
-
-
-# --------------- Admin
-urlpatterns += [
-    # admin
-    path(settings.DEV_DASHBOARD_SETTINGS['admin_url'] + "/", admin.site.urls),
-]
-# ------------------------------
-
-# --------------- JWT
+from django.contrib import admin
+from django.urls import include, path
 from rest_framework_simplejwt.views import (
-    TokenVerifyView, TokenObtainPairView, TokenRefreshView
-)
-urlpatterns += [
-    path(
-        settings.DEV_DASHBOARD_SETTINGS['jwt_token_url'],
-        TokenObtainPairView.as_view(), name="token-get"
-    ),
-    path(
-        settings.DEV_DASHBOARD_SETTINGS['jwt_refresh_url'],
-        TokenRefreshView.as_view(), name="token-refresh"
-    ),
-    path(
-        settings.DEV_DASHBOARD_SETTINGS['jwt_verify_url'],
-        TokenVerifyView.as_view(), name="token-verify"
-    ),
-]
-# ---------------------------------
-
-# Optional Swagger setup, disabled. Raw string because it contains regex escapes.
-r'''
-# ----------------------- Swagger
-from django.urls import re_path
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
-from rest_framework.permissions import AllowAny, IsAdminUser
-schema_view = get_schema_view(
-    openapi.Info(
-        title="DEV DASHBOARD API",
-        default_version="v1",
-        description="DEV API",
-    ),
-    public=True,
-    permission_classes=(AllowAny,)
-    #permission_classes = (IsAdminUser,) # 限制is_staff才可使用
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
 )
 
-urlpatterns += [
-    re_path(
-        r"^api/__hidden_swagger(?P<format>\.json|\.yaml)$",
-        schema_view.without_ui(cache_timeout=0),
-        name="schema-json",
-    ),
-    re_path(
-        r"^api/__hidden_swagger/$",
-        schema_view.with_ui("swagger", cache_timeout=0),
-        name="schema-swagger-ui",
-    ),
-    re_path(
-        r"^api/__hidden_redoc/$",
-        schema_view.with_ui("redoc", cache_timeout=0),
-        name="schema-redoc",
-    ),
+dashboard_urls = settings.DEV_DASHBOARD_SETTINGS
+
+urlpatterns = [
+    # Google and Microsoft login (django-simple-third-party-jwt)
+    path("", include("django_simple_third_party_jwt.urls")),
+    # The dev dashboard
+    path(dashboard_urls['dashboard_url'] + "/", include("django_simple_third_party_jwt_dev_dashboard.urls")),
+    path(dashboard_urls['admin_url'] + "/", admin.site.urls),
+    # Simple JWT
+    path(dashboard_urls['jwt_token_url'], TokenObtainPairView.as_view(), name="token-get"),
+    path(dashboard_urls['jwt_refresh_url'], TokenRefreshView.as_view(), name="token-refresh"),
+    path(dashboard_urls['jwt_verify_url'], TokenVerifyView.as_view(), name="token-verify"),
 ]
-# --------------------------------------------
 
-'''
-
-
+# Optional Swagger and Redoc pages. To try them: add "drf_yasg" to INSTALLED_APPS,
+# uncomment swagger_url and redoc_url in DEV_DASHBOARD_SETTINGS, and uncomment this block.
+#
+# from drf_yasg import openapi
+# from drf_yasg.views import get_schema_view
+# from rest_framework.permissions import AllowAny
+#
+# schema_view = get_schema_view(
+#     openapi.Info(title="DEV DASHBOARD API", default_version="v1", description="DEV API"),
+#     public=True,
+#     permission_classes=(AllowAny,),  # or (IsAdminUser,) to allow staff only
+# )
+# urlpatterns += [
+#     path(dashboard_urls['swagger_url'] + "/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
+#     path(dashboard_urls['redoc_url'] + "/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
+# ]

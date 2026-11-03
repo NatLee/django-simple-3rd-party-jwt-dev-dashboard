@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
-from datetime import timedelta
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -131,38 +131,34 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-#########################################
-#########################################
-#########################################
+# ---------------------------------------------------------------------------
+# Dev dashboard and third-party login (see the README's Quick Start)
+# ---------------------------------------------------------------------------
 
-
-# -------------- START - Policy Setting --------------
+# Let the Google Sign-In popup talk back to this page.
 SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
-# SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
-# -------------- END - Policy Setting -----------------
 
-# -------------- START - Dashboard Setting --------------
 DEV_DASHBOARD_SETTINGS = {
     'jwt_token_url': 'api/auth/token',
     'jwt_refresh_url': 'api/auth/token/refresh',
     'jwt_verify_url': 'api/auth/token/verify',
     'dashboard_url': 'api/__hidden_dev_dashboard',
     'admin_url': 'api/__hidden_admin',
-    #'swagger_url': 'api/__hidden_swagger', # optional
-    #'redoc_url': 'api/__hidden_redoc', # optional
+    # 'swagger_url': 'api/__hidden_swagger',  # optional, needs the Swagger routes in urls.py
+    # 'redoc_url': 'api/__hidden_redoc',  # optional, same
 }
-# --------------- END - Dashboard Setting -----------------
 
-# New settings for django_simple_third_party_jwt
+# Used by django-simple-third-party-jwt
 LOGIN_REDIRECT_URL = '/' + DEV_DASHBOARD_SETTINGS['dashboard_url']
 JWT_3RD_PREFIX = 'api'
-# ----------------------------------------------
 
-#########################################
-#########################################
-#########################################
-
-
-
-
+# To try your own Google / Microsoft apps, export these before `runserver`.
+# Unset ones are left to django-simple-third-party-jwt's built-in demo values.
+for _name in (
+    'SOCIAL_GOOGLE_CLIENT_ID',
+    'SOCIAL_MICROSOFT_CLIENT_ID',
+    'SOCIAL_MICROSOFT_CLIENT_SECRET',
+):
+    if os.environ.get(_name):
+        globals()[_name] = os.environ[_name]
