@@ -1,4 +1,4 @@
-"""User forms. The dashboard views use Django's AuthenticationForm; these stay for projects that import them."""
+"""Two user forms kept for projects that import them; see compat.py (they can go in 1.0)."""
 from django import forms
 from django.contrib.auth.models import User
 
