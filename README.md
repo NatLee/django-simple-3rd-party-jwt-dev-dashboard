@@ -263,3 +263,12 @@ bash dev-reinstall.sh
 ```powershell
 ./dev-reinstall.ps1
 ```
+
+### Run the tests
+
+The tests use the settings in `tests/settings.py`, which follow the Quick Start above. CI runs the same command on Python 3.8 to 3.14.
+
+```bash
+pip install tox
+tox -e py
+```
