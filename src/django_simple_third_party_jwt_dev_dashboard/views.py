@@ -20,6 +20,10 @@ from django_simple_third_party_jwt_dev_dashboard.settings import DEFAULT_DEV_DAS
 # A key the project leaves out becomes "", which hides the matching navbar link.
 URL_SETTING_KEYS = tuple(DEFAULT_DEV_DASHBOARD_SETTINGS)
 
+# The pages live in templates/<this package>/, the usual Django namespace, so a project's own
+# base.html or login.html cannot replace them by accident.
+TEMPLATE_DIR = __package__ + "/"
+
 # Template context shared by every page, built once when Django imports the views.
 dev_dashboard_setting = {
     "social_google_client_id": jwt_settings.SOCIAL_GOOGLE_CLIENT_ID,
@@ -60,7 +64,7 @@ def allow_google_sign_in(view: Callable[..., HttpResponse]) -> Callable[..., Htt
 @allow_google_sign_in
 def dashboard(request: HttpRequest) -> HttpResponse:
     """Show the client IDs, the JWT kept in the browser and the session state."""
-    return render(request, "dashboard.html", dev_dashboard_setting)
+    return render(request, TEMPLATE_DIR + "dashboard.html", dev_dashboard_setting)
 
 
 @csrf_exempt
@@ -75,7 +79,7 @@ def login(request: HttpRequest) -> HttpResponse:
     else:
         form = AuthenticationForm(request)
 
-    return render(request, "login.html", {**dev_dashboard_setting, "form": form})
+    return render(request, TEMPLATE_DIR + "login.html", {**dev_dashboard_setting, "form": form})
 
 
 @csrf_exempt

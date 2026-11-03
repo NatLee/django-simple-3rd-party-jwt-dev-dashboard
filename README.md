@@ -104,8 +104,20 @@ dashboard, so a fresh install with `"bootstrap3"` still listed stops with
 `ModuleNotFoundError: No module named 'bootstrap3'`. Keep it (and `pip install django-bootstrap3`
 yourself) only if your own templates use it.
 
-**If you override the dashboard's templates**, two more things changed:
+**If you override the dashboard's templates**, three more things changed:
 
+- The templates moved into the package's own folder, the usual Django layout. Move your overrides the
+  same way and update their `{% extends %}` line:
+
+  | 0.2.x | 0.3.0 |
+  |---|---|
+  | `templates/base.html` | `templates/django_simple_third_party_jwt_dev_dashboard/base.html` |
+  | `templates/dashboard.html` | `templates/django_simple_third_party_jwt_dev_dashboard/dashboard.html` |
+  | `templates/login.html` | `templates/django_simple_third_party_jwt_dev_dashboard/login.html` |
+  | `{% extends "base.html" %}` | `{% extends "django_simple_third_party_jwt_dev_dashboard/base.html" %}` |
+
+  An override left at the old name is simply ignored. In return, a `base.html` or `login.html` that
+  belongs to your own site no longer replaces the dashboard's pages.
 - The pages no longer use Bootstrap or jQuery: they bring their own CSS and plain JavaScript, and jQuery
   is not loaded any more. A `dashboard.html` or `login.html` of yours that relies on Bootstrap classes,
   `{% bootstrap_* %}` tags or `$` needs those back: load Bootstrap's CSS and jQuery in the
@@ -328,13 +340,15 @@ urlpatterns += [
 
 ## Customizing the pages
 
-The pages are three templates you can override from your project's `templates/` folder:
-`base.html` (top bar, side card, shared JavaScript), `dashboard.html` and `login.html`. The names are
-generic, so a project-level `base.html` replaces the dashboard's one too; check that before you add one.
+The pages are three templates you can override from your project's templates folder, under
+`django_simple_third_party_jwt_dev_dashboard/`: `base.html` (top bar, side card, shared JavaScript),
+`dashboard.html` and `login.html`. For example, `templates/django_simple_third_party_jwt_dev_dashboard/dashboard.html`
+that starts with `{% extends "django_simple_third_party_jwt_dev_dashboard/base.html" %}` replaces the
+dashboard page and keeps the rest.
 
 - **Blocks** in `base.html`: `title`, `extra_head` (extra `<style>` or `<script>`), `content`, and
   `aside` (the side column; `{{ block.super }}` keeps the Google and Microsoft card).
-- **Styles** live in the template `django_simple_third_party_jwt_dev_dashboard/dashboard.css` and use
+- **Styles** live in the template `django_simple_third_party_jwt_dev_dashboard/dashboard.css` (next to the pages) and use
   CSS variables, so a few lines in `extra_head` can recolour everything:
   `<style>:root { --dd-accent: #0a7c55; }</style>`.
 - **JavaScript** functions you can call from your own templates: `show_verified_token(token, message)`,
@@ -392,7 +406,8 @@ src/django_simple_third_party_jwt_dev_dashboard/
     checks.py      the startup checks
     settings.py    DEV_DASHBOARD_SETTINGS, its defaults and the Simple JWT URL table
     compat.py      what is kept only for code written for 0.2.x, to be dropped in 1.0
-    templates/     base.html, dashboard.html, login.html, and the CSS and JavaScript they include
+    templates/django_simple_third_party_jwt_dev_dashboard/
+                   base.html, dashboard.html, login.html, and the CSS and JavaScript they include
 example/           the runnable example project and its Docker Compose demo
 tests/             the test suite; tests/settings.py mirrors the quick start
 docs/images/       README screenshots
