@@ -88,3 +88,13 @@ class JWTEndpointTests(TestCase):
         response = self.client.post("/api/auth/token/refresh", {"refresh": tokens["refresh"]})
         self.assertEqual(response.status_code, 200)
         self.assertIn("access", response.json())
+
+
+class MicrosoftButtonTests(TestCase):
+    def test_microsoft_logo_uses_the_original_file_not_a_thumbnail(self):
+        # Wikimedia answers HTTP 400 for the 2048px thumbnail the template used,
+        # which left a broken image on every page. The original SVG file is served.
+        response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, 'src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"')
+        self.assertNotContains(response, "upload.wikimedia.org/wikipedia/commons/thumb/")
