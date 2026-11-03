@@ -12,18 +12,19 @@ on:
 
 jobs:
   test:
-    name: Python ${{ matrix.python }} / Django ${{ matrix.django }}
+    name: Python ${{ matrix.python }} / ${{ matrix.deps }} dependencies
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
-        # "latest" = the newest Django that supports this Python version
-        django: ["latest"]
+        # "latest" = the newest release of each dependency that supports this Python version
+        deps: ["latest"]
         include:
-          # oldest Django allowed by setup.py (django>=4.0.0)
-          - python: "3.10"
-            django: "4.0.*"
+          # "lowest" = every ">=" floor in setup.py's install_requires (Django, the base package);
+          # on the oldest Python that python_requires allows
+          - python: "3.8"
+            deps: "lowest"
 
     steps:
       - uses: actions/checkout@v4
@@ -33,11 +34,24 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install tox
         run: pip install tox
-      - name: Pin Django ${{ matrix.django }}
-        if: matrix.django != 'latest'
-        # tox passes PIP_* variables on to pip, so this pins Django inside the tox env
+      - name: Pin the lowest versions setup.py allows
+        if: matrix.deps == 'lowest'
+        # Reads the requirements from the package's own metadata, so the pins follow setup.py.
+        # tox passes PIP_* variables on to pip, so the constraints apply inside the tox env.
         run: |
-          echo "django==${{ matrix.django }}" > "$RUNNER_TEMP/constraints.txt"
+          pip install packaging
+          pip install --quiet --dry-run --no-deps --ignore-installed --report "$RUNNER_TEMP/report.json" .
+          python - "$RUNNER_TEMP/report.json" > "$RUNNER_TEMP/constraints.txt" <<'PY'
+          import json, sys
+          from packaging.requirements import Requirement
+          (package,) = json.load(open(sys.argv[1]))["install"]
+          for line in package["metadata"].get("requires_dist", []):
+              requirement = Requirement(line)
+              floors = [spec.version for spec in requirement.specifier if spec.operator == ">="]
+              if floors and not requirement.marker:  # markers here are extras such as [dev]
+                  print(f"{requirement.name}=={floors[0]}")
+          PY
+          cat "$RUNNER_TEMP/constraints.txt"
           echo "PIP_CONSTRAINT=$RUNNER_TEMP/constraints.txt" >> "$GITHUB_ENV"
       - name: Run tests
         # Runs tox with the Python version on PATH
