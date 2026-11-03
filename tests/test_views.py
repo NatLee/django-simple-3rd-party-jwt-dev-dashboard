@@ -1,3 +1,5 @@
+import hashlib
+from pathlib import Path
 from unittest import mock
 
 from django.conf import settings
@@ -98,13 +100,23 @@ class JWTEndpointTests(TestCase):
 
 
 class MicrosoftButtonTests(TestCase):
-    def test_microsoft_logo_uses_the_original_file_not_a_thumbnail(self):
-        # Wikimedia answers HTTP 400 for the 2048px thumbnail the template used,
-        # which left a broken image on every page. The original SVG file is served.
+    def test_the_microsoft_logo_ships_with_the_package(self):
+        # It used to be an image from Wikimedia, which once turned into a broken thumbnail.
         response = self.client.get(DASHBOARD)
 
-        self.assertContains(response, 'src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"')
-        self.assertNotContains(response, "upload.wikimedia.org/wikipedia/commons/thumb/")
+        self.assertNotContains(response, "<img")
+        self.assertContains(response, '<rect x="1" y="1" width="9" height="9" fill="#f25022"/>')
+        self.assertContains(response, "Sign in with Microsoft")
+
+    def test_the_logo_is_microsofts_file_unaltered(self):
+        # SHA-256 of ms-symbollockup_mssymbol_19.svg as downloaded on 2026-11-04 from
+        # https://learn.microsoft.com/en-us/entra/identity-platform/howto-add-branding-in-apps
+        logo = Path(views.__file__).resolve().parent / "templates" / views.TEMPLATE_DIR / "microsoft-logo.svg"
+
+        self.assertEqual(
+            hashlib.sha256(logo.read_bytes()).hexdigest(),
+            "929f48f88c8ca7f3f5d294be47ec4caf51acc28ac25340c19a903125d7ecd84a",
+        )
 
 
 class NavbarTests(TestCase):
@@ -139,14 +151,6 @@ class NavbarTests(TestCase):
 
         self.assertNotContains(response, "Swagger")
         self.assertNotContains(response, "Redoc")
-
-    def test_swagger_and_redoc_links_follow_the_settings(self):
-        urls = {"swagger_url": "api/__hidden_swagger", "redoc_url": "api/__hidden_redoc"}
-        with mock.patch.dict(views.dev_dashboard_setting, urls):
-            response = self.client.get(DASHBOARD)
-
-        self.assertContains(response, 'href="/api/__hidden_swagger"')
-        self.assertContains(response, 'href="/api/__hidden_redoc"')
 
 
 class LoginEdgeCaseTests(TestCase):

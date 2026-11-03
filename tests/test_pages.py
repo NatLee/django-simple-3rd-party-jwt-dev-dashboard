@@ -1,10 +1,12 @@
 """What the redesigned pages promise: states, assets, and the parts that overriding templates rely on."""
 import re
+import tempfile
 import types
 from importlib.metadata import requires
 from pathlib import Path
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.template import engines
 from django.test import RequestFactory, TestCase, override_settings
@@ -15,6 +17,7 @@ from django_simple_third_party_jwt_dev_dashboard import __version__, views
 DASHBOARD = "/api/__hidden_dev_dashboard/"
 LOGIN = DASHBOARD + "login"
 PACKAGE = Path(views.__file__).resolve().parent  # the installed copy (site-packages under tox)
+TEMPLATES = PACKAGE / "templates" / views.TEMPLATE_DIR
 
 
 class StateTests(TestCase):
@@ -112,7 +115,7 @@ class TokenStorageTests(TestCase):
         self.assertContains(response, 'data-refresh-token-key="my_refresh"')
 
     def test_script_has_no_storage_keys_of_its_own(self):
-        script = (PACKAGE / "templates" / "django_simple_third_party_jwt_dev_dashboard" / "dashboard.js").read_text("utf-8")
+        script = (TEMPLATES / "dashboard.js").read_text("utf-8")
 
         self.assertNotIn('"access_token"', script)
         self.assertNotIn('"refresh_token"', script)
@@ -172,15 +175,47 @@ class AssetTests(TestCase):
     def test_page_templates_leave_colours_to_the_stylesheet(self):
         # Colours live in dashboard.css as variables, so overriding them restyles everything.
         for name in ("base.html", "dashboard.html", "login.html"):
-            source = (PACKAGE / "templates" / name).read_text("utf-8")
+            source = (TEMPLATES / name).read_text("utf-8")
 
             self.assertNotIn('style="', source, name)
 
     def test_included_files_have_no_template_tags(self):
         # base.html includes them as templates; a stray "{%" would break every page.
-        for name in ("dashboard.css", "dashboard.js"):
-            text = (PACKAGE / "templates" / "django_simple_third_party_jwt_dev_dashboard" / name).read_text("utf-8")
+        for name in ("dashboard.css", "dashboard.js", "microsoft-logo.svg"):
+            text = (TEMPLATES / name).read_text("utf-8")
             self.assertIsNone(re.search(r"\{[{%#]", text), name)
+
+
+class TemplateNamespaceTests(TestCase):
+    """Since 0.3.0 the pages are django_simple_third_party_jwt_dev_dashboard/<name>.html."""
+
+    def project_templates(self, files):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        for name, text in files.items():
+            Path(folder.name, name).parent.mkdir(parents=True, exist_ok=True)
+            Path(folder.name, name).write_text(text, encoding="utf-8")
+        return override_settings(TEMPLATES=[dict(settings.TEMPLATES[0], DIRS=[folder.name])])
+
+    def test_a_projects_own_base_html_no_longer_takes_over(self):
+        # Before 0.3.0 a project-level templates/base.html replaced the dashboard's.
+        with self.project_templates({"base.html": "project base", "dashboard.html": "project page"}):
+            response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, 'id="jwt-card"')
+        self.assertNotContains(response, "project base")
+        self.assertNotContains(response, "project page")
+
+    def test_a_project_overrides_a_page_under_the_namespace(self):
+        page = (
+            '{% extends "django_simple_third_party_jwt_dev_dashboard/base.html" %}'
+            "{% block content %}<p>my dashboard</p>{% endblock %}"
+        )
+        with self.project_templates({"django_simple_third_party_jwt_dev_dashboard/dashboard.html": page}):
+            response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, "<p>my dashboard</p>")
+        self.assertContains(response, 'id="microsoft-login-button"')
 
 
 class OverrideContractTests(TestCase):
@@ -193,7 +228,7 @@ class OverrideContractTests(TestCase):
 
     def test_blocks_of_base_html(self):
         html = self.render(
-            '{% extends "base.html" %}{% block title %}T1{% endblock %}'
+            '{% extends "django_simple_third_party_jwt_dev_dashboard/base.html" %}{% block title %}T1{% endblock %}'
             "{% block extra_head %}<style>.mine{}</style>{% endblock %}"
             "{% block content %}<p>my page</p>{% endblock %}"
             "{% block aside %}{{ block.super }}<p>my aside</p>{% endblock %}"

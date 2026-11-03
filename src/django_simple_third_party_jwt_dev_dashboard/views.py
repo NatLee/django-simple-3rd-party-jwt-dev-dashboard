@@ -1,6 +1,6 @@
 """The dashboard page and the session login and logout behind it."""
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, Dict, Optional
 
 from django.conf import settings as django_settings
 from django.contrib.auth import login as auth_login
@@ -9,16 +9,26 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.urls import Resolver404, resolve
 from django.views.decorators.csrf import csrf_exempt
 
 from django_simple_third_party_jwt import settings as jwt_settings
 from django_simple_third_party_jwt_dev_dashboard import __version__
 from django_simple_third_party_jwt_dev_dashboard.compat import legacy_context
-from django_simple_third_party_jwt_dev_dashboard.settings import DEFAULT_DEV_DASHBOARD_SETTINGS, DEV_DASHBOARD_SETTINGS
+from django_simple_third_party_jwt_dev_dashboard.settings import (
+    DEFAULT_DEV_DASHBOARD_SETTINGS,
+    DEV_DASHBOARD_SETTINGS,
+    LINK_SETTING_KEYS,
+)
 
 # Paths the templates link to or call from JavaScript: every DEV_DASHBOARD_SETTINGS key.
-# A key the project leaves out becomes "", which hides the matching navbar link.
+# A key the project leaves out becomes "", which hides the matching navbar link; so does a link
+# whose page is not served (see page_context).
 URL_SETTING_KEYS = tuple(DEFAULT_DEV_DASHBOARD_SETTINGS)
+
+# The pages live in templates/<this package>/, the usual Django namespace, so a project's own
+# base.html or login.html cannot replace them by accident.
+TEMPLATE_DIR = __package__ + "/"
 
 # Template context shared by every page, built once when Django imports the views.
 dev_dashboard_setting = {
@@ -44,6 +54,31 @@ GOOGLE_SIGN_IN_HEADERS = {
 }
 
 
+def is_served(path: str, urlconf: Optional[str] = None) -> bool:
+    """True if the URLconf answers `path`, with or without a trailing slash (APPEND_SLASH)."""
+    for candidate in (path, path.rstrip("/") + "/"):
+        try:
+            resolve(candidate, urlconf)
+            return True
+        except Resolver404:
+            pass
+    return False
+
+
+def page_context(request: HttpRequest, **extra: Any) -> Dict[str, Any]:
+    """The template context: dev_dashboard_setting, without links to pages that are not served.
+
+    That keeps the Swagger and Redoc links away while drf-yasg is not installed, and hides an
+    Admin link that points nowhere, instead of showing links that end in a 404.
+    """
+    context = {**dev_dashboard_setting, **extra}
+    urlconf = getattr(request, "urlconf", None)
+    for key in LINK_SETTING_KEYS:
+        if context[key] and not is_served("/" + context[key], urlconf):
+            context[key] = ""
+    return context
+
+
 def allow_google_sign_in(view: Callable[..., HttpResponse]) -> Callable[..., HttpResponse]:
     """Send GOOGLE_SIGN_IN_HEADERS with the view's response (SecurityMiddleware keeps them)."""
 
@@ -60,7 +95,7 @@ def allow_google_sign_in(view: Callable[..., HttpResponse]) -> Callable[..., Htt
 @allow_google_sign_in
 def dashboard(request: HttpRequest) -> HttpResponse:
     """Show the client IDs, the JWT kept in the browser and the session state."""
-    return render(request, "dashboard.html", dev_dashboard_setting)
+    return render(request, TEMPLATE_DIR + "dashboard.html", page_context(request))
 
 
 @csrf_exempt
@@ -75,7 +110,7 @@ def login(request: HttpRequest) -> HttpResponse:
     else:
         form = AuthenticationForm(request)
 
-    return render(request, "login.html", {**dev_dashboard_setting, "form": form})
+    return render(request, TEMPLATE_DIR + "login.html", page_context(request, form=form))
 
 
 @csrf_exempt

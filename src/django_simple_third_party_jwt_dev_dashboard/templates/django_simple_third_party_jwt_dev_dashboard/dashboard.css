@@ -476,7 +476,7 @@ body.dd {
   cursor: pointer;
 }
 #microsoft-login-button:hover { background: #f5f7f9; }
-#microsoft-login-button img { width: 20px; height: 20px; }
+.dd-ms-logo svg { display: block; width: 20px; height: 20px; }
 
 /* ---------- Notices and alerts ---------- */
 

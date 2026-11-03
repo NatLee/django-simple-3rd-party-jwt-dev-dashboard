@@ -43,7 +43,9 @@ pip install django-simple-third-party-jwt-dev-dashboard
 ```
 
 Needs Python 3.8+ and Django 4.0+. It also installs Django REST framework and
-django-simple-third-party-jwt, which brings Simple JWT.
+django-simple-third-party-jwt, which brings Simple JWT. For the optional Swagger and Redoc pages, install
+the `docs` extra instead: `pip install "django-simple-third-party-jwt-dev-dashboard[docs]"` (see
+[API docs](#api-docs-swagger-and-redoc)).
 
 ## Quick start
 
@@ -99,13 +101,29 @@ If a path does not line up, `runserver` and `manage.py check` tell you which one
 
 ## Upgrading from 0.2.x
 
-**Remove `"bootstrap3"` from `INSTALLED_APPS`.** django-bootstrap3 is no longer installed with the
-dashboard, so a fresh install with `"bootstrap3"` still listed stops with
-`ModuleNotFoundError: No module named 'bootstrap3'`. Keep it (and `pip install django-bootstrap3`
-yourself) only if your own templates use it.
+**Check `INSTALLED_APPS` for `"bootstrap3"` and `"drf_yasg"`.** Neither package is installed with the
+dashboard any more, so a fresh install with either one still listed stops with
+`ModuleNotFoundError`.
 
-**If you override the dashboard's templates**, two more things changed:
+- `"bootstrap3"`: remove it. Keep it (and `pip install django-bootstrap3` yourself) only if your own
+  templates use it.
+- `"drf_yasg"`: if you want the Swagger and Redoc pages, install the extra,
+  `pip install "django-simple-third-party-jwt-dev-dashboard[docs]"`; otherwise remove it.
 
+**If you override the dashboard's templates**, three more things changed:
+
+- The templates moved into the package's own folder, the usual Django layout. Move your overrides the
+  same way and update their `{% extends %}` line:
+
+  | 0.2.x | 0.3.0 |
+  |---|---|
+  | `templates/base.html` | `templates/django_simple_third_party_jwt_dev_dashboard/base.html` |
+  | `templates/dashboard.html` | `templates/django_simple_third_party_jwt_dev_dashboard/dashboard.html` |
+  | `templates/login.html` | `templates/django_simple_third_party_jwt_dev_dashboard/login.html` |
+  | `{% extends "base.html" %}` | `{% extends "django_simple_third_party_jwt_dev_dashboard/base.html" %}` |
+
+  An override left at the old name is simply ignored. In return, a `base.html` or `login.html` that
+  belongs to your own site no longer replaces the dashboard's pages.
 - The pages no longer use Bootstrap or jQuery: they bring their own CSS and plain JavaScript, and jQuery
   is not loaded any more. A `dashboard.html` or `login.html` of yours that relies on Bootstrap classes,
   `{% bootstrap_* %}` tags or `$` needs those back: load Bootstrap's CSS and jQuery in the
@@ -127,9 +145,9 @@ Projects that only use the dashboard as it ships need nothing else. Optional cle
 | JWT login | **JWT Login** (or Enter) on the login page; the tokens go to `localStorage` | Simple JWT |
 | Refresh and verify | every dashboard visit, or **Refresh now**: the token is refreshed, verified and decoded | Simple JWT |
 | Google login | the **Sign in with Google** button | django-simple-3rd-party-jwt |
-| Microsoft login | **Login with Microsoft**, which comes back with a JWT | django-simple-3rd-party-jwt |
+| Microsoft login | **Sign in with Microsoft**, which comes back with a JWT | django-simple-3rd-party-jwt |
 | JWT logout | **JWT Logout** forgets the stored tokens | your browser |
-| Admin, Swagger, Redoc | top bar links, shown when you configure their URLs | your project |
+| Admin, Swagger, Redoc | top bar links, shown while their pages are served | your project; [API docs](#api-docs-swagger-and-redoc) |
 
 Each card says what state it is in (not logged in, checking, verified, rejected) and, when something
 fails, what the server answered:
@@ -151,8 +169,8 @@ This package only brings pages. The work happens in two other places:
   `/<JWT_3RD_PREFIX>/auth/google/token` and `/<JWT_3RD_PREFIX>/auth/microsoft/...`.
 
 The dashboard is a set of buttons wired to those URLs, so you can see the whole flow working in your
-project. Its CSS and plain JavaScript ship inside the package; only Google's Sign-In script and the
-Microsoft logo come from the internet.
+project. Its CSS, plain JavaScript and the Microsoft logo ship inside the package; only Google's Sign-In
+script comes from the internet.
 
 ## Settings
 
@@ -168,10 +186,10 @@ serves the first four for you.
 | `jwt_refresh_url` | the token refresh on every dashboard visit | `api/auth/token/refresh` |
 | `jwt_verify_url` | the token check after each login or refresh | `api/auth/token/verify` |
 | `admin_url` | the **Admin** link | `admin` |
-| `swagger_url` | the **Swagger** link, optional | not set |
-| `redoc_url` | the **Redoc** link, optional | not set |
+| `swagger_url` | the **Swagger** page and link, with the `docs` extra | not set |
+| `redoc_url` | the **Redoc** page and link, with the `docs` extra | not set |
 
-A link whose key is missing is hidden. If you leave out `DEV_DASHBOARD_SETTINGS` altogether, the
+A top bar link shows only while its page is served: a missing key, or nothing at that path, hides it. If you leave out `DEV_DASHBOARD_SETTINGS` altogether, the
 dashboard uses `api/__hidden_dev_dashboard`, `api/auth/token…` as above, plus `api/__hidden_admin`,
 `api/__hidden_swagger` and `api/__hidden_redoc` for the three links.
 
@@ -195,9 +213,8 @@ and a project that does not serve the dashboard (say, only while `DEBUG` is on) 
 | `dev_dashboard.W002` | the `django.template.context_processors.request` context processor is missing |
 | `dev_dashboard.W003` | a Simple JWT URL is missing from the settings or nothing serves it |
 | `dev_dashboard.W004` | the Google and Microsoft routes (`django_simple_third_party_jwt.urls`) are not included |
-| `dev_dashboard.W005` | the Admin, Swagger or Redoc link points at a page nothing serves |
 
-Silence one you do not care about with `SILENCED_SYSTEM_CHECKS = ["dev_dashboard.W005"]`.
+Silence one you do not care about with `SILENCED_SYSTEM_CHECKS = ["dev_dashboard.W001"]`.
 
 ### Google and Microsoft login
 
@@ -244,41 +261,29 @@ Those may stop working at any time, so register your own:
 
 </details>
 
-### Optional extras
+### API docs (Swagger and Redoc)
 
-<details>
-<summary><b>Swagger and Redoc links</b> (drf-yasg)</summary>
+The Swagger and Redoc pages come with the `docs` extra, which installs
+[drf-yasg](https://github.com/axnsan12/drf-yasg):
 
-drf-yasg is installed with this package. Add `"drf_yasg"` to `INSTALLED_APPS`, add the two URLs to
-`DEV_DASHBOARD_SETTINGS`, and serve the pages in `urls.py`:
+```bash
+pip install "django-simple-third-party-jwt-dev-dashboard[docs]"
+```
+
+Then turn them on in `settings.py`:
 
 ```python
-# settings.py
+INSTALLED_APPS += ["drf_yasg"]
 DEV_DASHBOARD_SETTINGS["swagger_url"] = "api/__hidden_swagger"
 DEV_DASHBOARD_SETTINGS["redoc_url"] = "api/__hidden_redoc"
 SWAGGER_USE_COMPAT_RENDERERS = False
 ```
 
-```python
-# urls.py
-from django.conf import settings
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
-from rest_framework.permissions import AllowAny
+`all_urls` then serves both pages, and the top bar links to them. Like the dashboard itself, they are
+open to anyone who finds the hidden URL. Without drf-yasg there are no docs pages and no links, and
+nothing else changes: the dashboard never imports drf-yasg unless `"drf_yasg"` is in `INSTALLED_APPS`.
 
-dashboard_urls = settings.DEV_DASHBOARD_SETTINGS
-schema_view = get_schema_view(
-    openapi.Info(title="DEV DASHBOARD API", default_version="v1"),
-    public=True,
-    permission_classes=(AllowAny,),
-)
-urlpatterns += [
-    path(dashboard_urls["swagger_url"] + "/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
-    path(dashboard_urls["redoc_url"] + "/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
-]
-```
-
-</details>
+### Optional extras
 
 <details>
 <summary><b>Token lifetimes</b> (Simple JWT)</summary>
@@ -324,17 +329,37 @@ urlpatterns += [
 ]
 ```
 
+With the `docs` extra, add the API docs pages the same way:
+
+```python
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework.permissions import AllowAny
+
+schema_view = get_schema_view(
+    openapi.Info(title="DEV DASHBOARD API", default_version="v1"),
+    public=True,
+    permission_classes=(AllowAny,),
+)
+urlpatterns += [
+    path(dashboard_urls["swagger_url"] + "/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
+    path(dashboard_urls["redoc_url"] + "/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
+]
+```
+
 </details>
 
 ## Customizing the pages
 
-The pages are three templates you can override from your project's `templates/` folder:
-`base.html` (top bar, side card, shared JavaScript), `dashboard.html` and `login.html`. The names are
-generic, so a project-level `base.html` replaces the dashboard's one too; check that before you add one.
+The pages are three templates you can override from your project's templates folder, under
+`django_simple_third_party_jwt_dev_dashboard/`: `base.html` (top bar, side card, shared JavaScript),
+`dashboard.html` and `login.html`. For example, `templates/django_simple_third_party_jwt_dev_dashboard/dashboard.html`
+that starts with `{% extends "django_simple_third_party_jwt_dev_dashboard/base.html" %}` replaces the
+dashboard page and keeps the rest.
 
 - **Blocks** in `base.html`: `title`, `extra_head` (extra `<style>` or `<script>`), `content`, and
   `aside` (the side column; `{{ block.super }}` keeps the Google and Microsoft card).
-- **Styles** live in the template `django_simple_third_party_jwt_dev_dashboard/dashboard.css` and use
+- **Styles** live in the template `django_simple_third_party_jwt_dev_dashboard/dashboard.css` (next to the pages) and use
   CSS variables, so a few lines in `extra_head` can recolour everything:
   `<style>:root { --dd-accent: #0a7c55; }</style>`.
 - **JavaScript** functions you can call from your own templates: `show_verified_token(token, message)`,
@@ -392,7 +417,8 @@ src/django_simple_third_party_jwt_dev_dashboard/
     checks.py      the startup checks
     settings.py    DEV_DASHBOARD_SETTINGS, its defaults and the Simple JWT URL table
     compat.py      what is kept only for code written for 0.2.x, to be dropped in 1.0
-    templates/     base.html, dashboard.html, login.html, and the CSS and JavaScript they include
+    templates/django_simple_third_party_jwt_dev_dashboard/
+                   base.html, dashboard.html, login.html, and the CSS and JavaScript they include
 example/           the runnable example project and its Docker Compose demo
 tests/             the test suite; tests/settings.py mirrors the quick start
 docs/images/       README screenshots
@@ -404,3 +430,8 @@ current environment.
 ## License
 
 [MIT](https://github.com/NatLee/django-simple-3rd-party-jwt-dev-dashboard/blob/main/LICENSE)
+
+The Microsoft logo on the sign-in button is Microsoft's trademark. The package ships Microsoft's own file
+for sign-in buttons, unaltered, as its
+[Sign in with Microsoft branding guidelines](https://learn.microsoft.com/en-us/entra/identity-platform/howto-add-branding-in-apps)
+provide it.

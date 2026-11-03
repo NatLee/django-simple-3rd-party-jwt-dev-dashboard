@@ -10,7 +10,7 @@ from typing import Any, List
 from django.apps import apps
 from django.conf import settings
 from django.core import checks
-from django.urls import NoReverseMatch, Resolver404, resolve, reverse
+from django.urls import NoReverseMatch, reverse
 
 from django_simple_third_party_jwt_dev_dashboard.settings import DEFAULT_DEV_DASHBOARD_SETTINGS, SIMPLE_JWT_URLS
 
@@ -19,19 +19,6 @@ REQUEST_CONTEXT_PROCESSOR = "django.template.context_processors.request"
 DJANGO_TEMPLATES = "django.template.backends.django.DjangoTemplates"
 # django-simple-third-party-jwt's routes that base.html links to by name.
 THIRD_PARTY_URL_NAMES = ("google-token", "microsoft-signin")
-# Navbar links to pages the project serves itself: (key, link text).
-LINK_URLS = (("admin_url", "Admin"), ("swagger_url", "Swagger"), ("redoc_url", "Redoc"))
-
-
-def _is_served(path: str) -> bool:
-    """True if the project's URLconf answers `path`, with or without a trailing slash."""
-    for candidate in (path, path.rstrip("/") + "/"):
-        try:
-            resolve(candidate)
-            return True
-        except Resolver404:
-            pass
-    return False
 
 
 def _reverses(name: str) -> bool:
@@ -57,6 +44,7 @@ def check_dashboard_setup(app_configs: Any = None, **kwargs: Any) -> List[checks
 
     # The values the pages really use (see views.dev_dashboard_setting).
     from django_simple_third_party_jwt_dev_dashboard.views import dev_dashboard_setting as pages
+    from django_simple_third_party_jwt_dev_dashboard.views import is_served
 
     found = []
 
@@ -88,7 +76,7 @@ def check_dashboard_setup(app_configs: Any = None, **kwargs: Any) -> List[checks
                 "Add %r with the path of Simple JWT's %s, such as %r." % (key, view, DEFAULT_DEV_DASHBOARD_SETTINGS[key]),
                 3,
             ))
-        elif not _is_served("/" + pages[key]):
+        elif not is_served("/" + pages[key]):
             found.append(_warning(
                 "Nothing is served at /%s (DEV_DASHBOARD_SETTINGS[%r]), which %s calls."
                 % (pages[key], key, caller),
@@ -106,15 +94,5 @@ def check_dashboard_setup(app_configs: Any = None, **kwargs: Any) -> List[checks
             "Include 'django_simple_third_party_jwt.urls' (or %r) in your urls.py." % ALL_URLS,
             4,
         ))
-
-    for key, label in LINK_URLS:
-        if pages[key] and not _is_served("/" + pages[key]):
-            found.append(_warning(
-                "The navbar's %s link goes to /%s, but nothing is served there." % (label, pages[key]),
-                "Serve that page there or change DEV_DASHBOARD_SETTINGS[%r]. A key left out of "
-                "DEV_DASHBOARD_SETTINGS hides its link; without the setting, the dashboard links "
-                "to %s." % (key, ", ".join(DEFAULT_DEV_DASHBOARD_SETTINGS[link] for link, _ in LINK_URLS)),
-                5,
-            ))
 
     return found

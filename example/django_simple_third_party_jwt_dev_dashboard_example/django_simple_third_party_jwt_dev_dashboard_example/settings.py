@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_simple_third_party_jwt',  # Google and Microsoft login
     'django_simple_third_party_jwt_dev_dashboard',  # the dashboard
-    # 'drf_yasg',  # optional: Swagger and Redoc, see urls.py
+    # 'drf_yasg',  # optional API docs: pip install "django-simple-third-party-jwt-dev-dashboard[docs]"
 ]
 
 MIDDLEWARE = [
@@ -136,8 +136,9 @@ DEV_DASHBOARD_SETTINGS = {
     'jwt_refresh_url': 'api/auth/token/refresh',
     'jwt_verify_url': 'api/auth/token/verify',
     'admin_url': 'admin',  # the navbar's Admin link: this project's admin
-    # 'swagger_url': 'api/__hidden_swagger',  # optional, needs the Swagger routes in urls.py
-    # 'redoc_url': 'api/__hidden_redoc',  # optional, same
+    # With drf_yasg installed, all_urls serves the API docs at these two paths:
+    # 'swagger_url': 'api/__hidden_swagger',
+    # 'redoc_url': 'api/__hidden_redoc',
 }
 JWT_3RD_PREFIX = 'api'  # Google and Microsoft routes live under /api/auth/...
 LOGIN_REDIRECT_URL = '/' + DEV_DASHBOARD_SETTINGS['dashboard_url']  # where a Microsoft login lands

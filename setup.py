@@ -26,11 +26,8 @@ setuptools.setup(
     package_dir={'': 'src'},
     packages=setuptools.find_packages(where='src'),
     package_data={
-        "django_simple_third_party_jwt_dev_dashboard": [
-            "templates/*.html",
-            # the CSS and JavaScript that base.html includes inline
-            "templates/django_simple_third_party_jwt_dev_dashboard/*",
-        ]
+        # the pages and the CSS and JavaScript that base.html includes inline
+        "django_simple_third_party_jwt_dev_dashboard": ["templates/django_simple_third_party_jwt_dev_dashboard/*"],
     },
     classifiers=[
         # see https://pypi.org/classifiers/
@@ -56,9 +53,11 @@ setuptools.setup(
         'django>=4.0.0',
         'djangorestframework',
         'django-simple-third-party-jwt>=0.2.3',
-        'drf-yasg',
     ],
     extras_require={
+        # Swagger and Redoc pages. drf-yasg 1.21.11 is the first release that no longer needs
+        # pkg_resources, which recent setuptools no longer ships.
+        'docs': ['drf-yasg>=1.21.11'],
         'dev': ['check-manifest'],
         # 'test': ['coverage'],
     },
