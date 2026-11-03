@@ -70,8 +70,8 @@ DEV_DASHBOARD_SETTINGS = {
 LOGIN_REDIRECT_URL = "/" + DEV_DASHBOARD_SETTINGS["dashboard_url"]
 JWT_3RD_PREFIX = "api"
 
-SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
-SECURE_CROSS_ORIGIN_OPENER_POLICY = None
+# SECURE_REFERRER_POLICY and SECURE_CROSS_ORIGIN_OPENER_POLICY keep Django's defaults: the
+# dashboard sends the headers Google Sign-In needs on its own pages.
 
 # Placeholder third-party login values; nothing here talks to Google or Microsoft.
 SOCIAL_GOOGLE_CLIENT_ID = "test-google-client-id.apps.googleusercontent.com"

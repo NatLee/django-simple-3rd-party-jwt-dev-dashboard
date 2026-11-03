@@ -35,16 +35,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # ---------------------------
-    # debug relative package
-    "rest_framework", # <------
-    #"drf_yasg", # for swagger, optional
-    'bootstrap3', # <------
-    # 3rd party login
-    'django_simple_third_party_jwt', # <------
-    # debug dashboard
-    'django_simple_third_party_jwt_dev_dashboard', # <------
-    # ---------------------------
+    # --- the dev dashboard (README "Quick start") ---
+    'rest_framework',
+    'django_simple_third_party_jwt',  # Google and Microsoft login
+    'django_simple_third_party_jwt_dev_dashboard',  # the dashboard
+    # 'drf_yasg',  # optional: Swagger and Redoc, see urls.py
 ]
 
 MIDDLEWARE = [
@@ -135,23 +130,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Dev dashboard and third-party login (see the README's Quick Start)
 # ---------------------------------------------------------------------------
 
-# Let the Google Sign-In popup talk back to this page.
-SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
-SECURE_CROSS_ORIGIN_OPENER_POLICY = None
-
 DEV_DASHBOARD_SETTINGS = {
+    'dashboard_url': 'api/__hidden_dev_dashboard',
     'jwt_token_url': 'api/auth/token',
     'jwt_refresh_url': 'api/auth/token/refresh',
     'jwt_verify_url': 'api/auth/token/verify',
-    'dashboard_url': 'api/__hidden_dev_dashboard',
-    'admin_url': 'api/__hidden_admin',
+    'admin_url': 'admin',  # the navbar's Admin link: this project's admin
     # 'swagger_url': 'api/__hidden_swagger',  # optional, needs the Swagger routes in urls.py
     # 'redoc_url': 'api/__hidden_redoc',  # optional, same
 }
+JWT_3RD_PREFIX = 'api'  # Google and Microsoft routes live under /api/auth/...
+LOGIN_REDIRECT_URL = '/' + DEV_DASHBOARD_SETTINGS['dashboard_url']  # where a Microsoft login lands
 
-# Used by django-simple-third-party-jwt
-LOGIN_REDIRECT_URL = '/' + DEV_DASHBOARD_SETTINGS['dashboard_url']
-JWT_3RD_PREFIX = 'api'
+# The dashboard sends the headers Sign in with Google needs on its own pages, so
+# SECURE_REFERRER_POLICY and SECURE_CROSS_ORIGIN_OPENER_POLICY keep Django's defaults.
 
 # To try your own Google / Microsoft apps, export these before `runserver`.
 # Unset ones are left to django-simple-third-party-jwt's built-in demo values.

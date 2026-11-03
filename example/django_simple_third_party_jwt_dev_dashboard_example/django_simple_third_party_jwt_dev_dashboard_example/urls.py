@@ -1,25 +1,14 @@
-"""URLs of the example project, the same as the README's `urls.py` section."""
+"""URLs of the example project, the same as the README's quick start."""
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
-)
 
 dashboard_urls = settings.DEV_DASHBOARD_SETTINGS
 
 urlpatterns = [
-    # Google and Microsoft login (django-simple-third-party-jwt)
-    path("", include("django_simple_third_party_jwt.urls")),
-    # The dev dashboard
-    path(dashboard_urls['dashboard_url'] + "/", include("django_simple_third_party_jwt_dev_dashboard.urls")),
-    path(dashboard_urls['admin_url'] + "/", admin.site.urls),
-    # Simple JWT
-    path(dashboard_urls['jwt_token_url'], TokenObtainPairView.as_view(), name="token-get"),
-    path(dashboard_urls['jwt_refresh_url'], TokenRefreshView.as_view(), name="token-refresh"),
-    path(dashboard_urls['jwt_verify_url'], TokenVerifyView.as_view(), name="token-verify"),
+    path("admin/", admin.site.urls),
+    # The dashboard, Simple JWT's token views, and the Google and Microsoft routes
+    path("", include("django_simple_third_party_jwt_dev_dashboard.all_urls")),
 ]
 
 # Optional Swagger and Redoc pages. To try them: add "drf_yasg" to INSTALLED_APPS,

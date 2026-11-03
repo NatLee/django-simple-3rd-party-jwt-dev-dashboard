@@ -1,3 +1,3 @@
-# pkg
+# The dashboard from PyPI; it brings Django, Django REST framework, Simple JWT and
+# django-simple-third-party-jwt along.
 django-simple-third-party-jwt-dev-dashboard
-django-simple-third-party-jwt

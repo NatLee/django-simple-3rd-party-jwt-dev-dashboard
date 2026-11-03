@@ -27,9 +27,9 @@ setuptools.setup(
     packages=setuptools.find_packages(where='src'),
     package_data={
         "django_simple_third_party_jwt_dev_dashboard": [
-            "templates/*",
-            "templates/dashboard/*",
-            "templates/registration/*",
+            "templates/*.html",
+            # the CSS and JavaScript that base.html includes inline
+            "templates/django_simple_third_party_jwt_dev_dashboard/*",
         ]
     },
     classifiers=[
