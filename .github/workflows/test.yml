@@ -26,14 +26,10 @@ jobs:
           - python: "3.8"
             deps: "lowest"
           # "factor" picks a tox env variant (see tox.ini) and extends that Python's job:
-          # 3.14 also installs the optional [docs] extra (drf-yasg), the others run without it;
-          # 3.13 runs against django-simple-third-party-jwt's unreleased main, until it is released.
+          # 3.14 also installs the optional [docs] extra (drf-yasg), the others run without it.
           - python: "3.14"
             deps: "latest"
             factor: "docs"
-          - python: "3.13"
-            deps: "latest"
-            factor: "jwtmain"
 
     steps:
       - uses: actions/checkout@v4
