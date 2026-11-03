@@ -29,8 +29,9 @@ class ExampleProjectTests(SimpleTestCase):
         result = run_example("check")
 
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        # The dashboard's own startup checks find nothing to complain about either.
-        self.assertIn("System check identified no issues", result.stdout, result.stderr)
+        # The dashboard's own startup checks find nothing to complain about. (Other packages may:
+        # django-simple-third-party-jwt after 0.4.0 warns until Microsoft credentials are set.)
+        self.assertNotIn("dev_dashboard.", result.stdout + result.stderr)
 
     def test_example_uses_the_one_line_urls_setup(self):
         text = EXAMPLE_URLS.read_text(encoding="utf-8")
