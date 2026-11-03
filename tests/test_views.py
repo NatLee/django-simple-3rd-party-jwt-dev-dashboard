@@ -1,0 +1,90 @@
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.urls import reverse
+
+DASHBOARD = "/api/__hidden_dev_dashboard/"
+LOGIN = DASHBOARD + "login"
+LOGOUT = DASHBOARD + "logout"
+
+
+class DashboardPageTests(TestCase):
+    def test_dashboard_renders_for_anonymous_user(self):
+        response = self.client.get(DASHBOARD)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Dev Dashboard")
+        self.assertContains(response, "No any session login.")
+
+    def test_dashboard_shows_configured_client_ids(self):
+        response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, "test-google-client-id.apps.googleusercontent.com")
+        self.assertContains(response, "test-microsoft-client-id")
+
+    def test_dashboard_uses_urls_from_dev_dashboard_settings(self):
+        response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, 'href="/api/__hidden_admin"')
+        self.assertContains(response, 'url: "/api/auth/token/refresh"')
+        self.assertContains(response, 'url: "/api/auth/token/verify"')
+
+    def test_third_party_login_links_match_base_package_routes(self):
+        # The dashboard builds these URLs by hand; they must match the routes that
+        # django-simple-third-party-jwt actually serves.
+        response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, 'url: "%s"' % reverse("google-token"))
+        self.assertContains(response, "location.href='%s'" % reverse("microsoft-signin"))
+
+
+class SessionLoginTests(TestCase):
+    def setUp(self):
+        User.objects.create_user("alice", password="s3cret-pass")
+
+    def test_login_page_shows_form_and_both_buttons(self):
+        response = self.client.get(LOGIN)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="username"')
+        self.assertContains(response, 'name="password"')
+        self.assertContains(response, "JWT Login")
+        self.assertContains(response, "Session Login")
+        self.assertContains(response, 'url: "/api/auth/token"')
+
+    def test_right_password_starts_a_session(self):
+        response = self.client.post(LOGIN, {"username": "alice", "password": "s3cret-pass"})
+
+        self.assertRedirects(response, DASHBOARD)
+        self.assertContains(self.client.get(DASHBOARD), "You are logged in as `alice`")
+
+    def test_wrong_password_keeps_user_logged_out(self):
+        response = self.client.post(LOGIN, {"username": "alice", "password": "wrong"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_logout_ends_the_session(self):
+        self.client.login(username="alice", password="s3cret-pass")
+
+        response = self.client.get(LOGOUT)
+
+        self.assertRedirects(response, DASHBOARD)
+        self.assertContains(self.client.get(DASHBOARD), "No any session login.")
+
+
+class JWTEndpointTests(TestCase):
+    """The dashboard's JavaScript calls these Simple JWT URLs from DEV_DASHBOARD_SETTINGS."""
+
+    def test_token_can_be_obtained_verified_and_refreshed(self):
+        User.objects.create_user("alice", password="s3cret-pass")
+
+        response = self.client.post("/api/auth/token", {"username": "alice", "password": "s3cret-pass"})
+        self.assertEqual(response.status_code, 200)
+        tokens = response.json()
+
+        response = self.client.post("/api/auth/token/verify", {"token": tokens["access"]})
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post("/api/auth/token/refresh", {"refresh": tokens["refresh"]})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("access", response.json())
