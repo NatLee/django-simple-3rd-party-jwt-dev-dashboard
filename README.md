@@ -43,7 +43,9 @@ pip install django-simple-third-party-jwt-dev-dashboard
 ```
 
 Needs Python 3.8+ and Django 4.0+. It also installs Django REST framework and
-django-simple-third-party-jwt, which brings Simple JWT.
+django-simple-third-party-jwt, which brings Simple JWT. For the optional Swagger and Redoc pages, install
+the `docs` extra instead: `pip install "django-simple-third-party-jwt-dev-dashboard[docs]"` (see
+[API docs](#api-docs-swagger-and-redoc)).
 
 ## Quick start
 
@@ -99,10 +101,14 @@ If a path does not line up, `runserver` and `manage.py check` tell you which one
 
 ## Upgrading from 0.2.x
 
-**Remove `"bootstrap3"` from `INSTALLED_APPS`.** django-bootstrap3 is no longer installed with the
-dashboard, so a fresh install with `"bootstrap3"` still listed stops with
-`ModuleNotFoundError: No module named 'bootstrap3'`. Keep it (and `pip install django-bootstrap3`
-yourself) only if your own templates use it.
+**Check `INSTALLED_APPS` for `"bootstrap3"` and `"drf_yasg"`.** Neither package is installed with the
+dashboard any more, so a fresh install with either one still listed stops with
+`ModuleNotFoundError`.
+
+- `"bootstrap3"`: remove it. Keep it (and `pip install django-bootstrap3` yourself) only if your own
+  templates use it.
+- `"drf_yasg"`: if you want the Swagger and Redoc pages, install the extra,
+  `pip install "django-simple-third-party-jwt-dev-dashboard[docs]"`; otherwise remove it.
 
 **If you override the dashboard's templates**, three more things changed:
 
@@ -141,7 +147,7 @@ Projects that only use the dashboard as it ships need nothing else. Optional cle
 | Google login | the **Sign in with Google** button | django-simple-3rd-party-jwt |
 | Microsoft login | **Login with Microsoft**, which comes back with a JWT | django-simple-3rd-party-jwt |
 | JWT logout | **JWT Logout** forgets the stored tokens | your browser |
-| Admin, Swagger, Redoc | top bar links, shown when you configure their URLs | your project |
+| Admin, Swagger, Redoc | top bar links, shown while their pages are served | your project; [API docs](#api-docs-swagger-and-redoc) |
 
 Each card says what state it is in (not logged in, checking, verified, rejected) and, when something
 fails, what the server answered:
@@ -180,10 +186,10 @@ serves the first four for you.
 | `jwt_refresh_url` | the token refresh on every dashboard visit | `api/auth/token/refresh` |
 | `jwt_verify_url` | the token check after each login or refresh | `api/auth/token/verify` |
 | `admin_url` | the **Admin** link | `admin` |
-| `swagger_url` | the **Swagger** link, optional | not set |
-| `redoc_url` | the **Redoc** link, optional | not set |
+| `swagger_url` | the **Swagger** page and link, with the `docs` extra | not set |
+| `redoc_url` | the **Redoc** page and link, with the `docs` extra | not set |
 
-A link whose key is missing is hidden. If you leave out `DEV_DASHBOARD_SETTINGS` altogether, the
+A top bar link shows only while its page is served: a missing key, or nothing at that path, hides it. If you leave out `DEV_DASHBOARD_SETTINGS` altogether, the
 dashboard uses `api/__hidden_dev_dashboard`, `api/auth/token…` as above, plus `api/__hidden_admin`,
 `api/__hidden_swagger` and `api/__hidden_redoc` for the three links.
 
@@ -207,9 +213,8 @@ and a project that does not serve the dashboard (say, only while `DEBUG` is on) 
 | `dev_dashboard.W002` | the `django.template.context_processors.request` context processor is missing |
 | `dev_dashboard.W003` | a Simple JWT URL is missing from the settings or nothing serves it |
 | `dev_dashboard.W004` | the Google and Microsoft routes (`django_simple_third_party_jwt.urls`) are not included |
-| `dev_dashboard.W005` | the Admin, Swagger or Redoc link points at a page nothing serves |
 
-Silence one you do not care about with `SILENCED_SYSTEM_CHECKS = ["dev_dashboard.W005"]`.
+Silence one you do not care about with `SILENCED_SYSTEM_CHECKS = ["dev_dashboard.W001"]`.
 
 ### Google and Microsoft login
 
@@ -256,41 +261,29 @@ Those may stop working at any time, so register your own:
 
 </details>
 
-### Optional extras
+### API docs (Swagger and Redoc)
 
-<details>
-<summary><b>Swagger and Redoc links</b> (drf-yasg)</summary>
+The Swagger and Redoc pages come with the `docs` extra, which installs
+[drf-yasg](https://github.com/axnsan12/drf-yasg):
 
-drf-yasg is installed with this package. Add `"drf_yasg"` to `INSTALLED_APPS`, add the two URLs to
-`DEV_DASHBOARD_SETTINGS`, and serve the pages in `urls.py`:
+```bash
+pip install "django-simple-third-party-jwt-dev-dashboard[docs]"
+```
+
+Then turn them on in `settings.py`:
 
 ```python
-# settings.py
+INSTALLED_APPS += ["drf_yasg"]
 DEV_DASHBOARD_SETTINGS["swagger_url"] = "api/__hidden_swagger"
 DEV_DASHBOARD_SETTINGS["redoc_url"] = "api/__hidden_redoc"
 SWAGGER_USE_COMPAT_RENDERERS = False
 ```
 
-```python
-# urls.py
-from django.conf import settings
-from drf_yasg import openapi
-from drf_yasg.views import get_schema_view
-from rest_framework.permissions import AllowAny
+`all_urls` then serves both pages, and the top bar links to them. Like the dashboard itself, they are
+open to anyone who finds the hidden URL. Without drf-yasg there are no docs pages and no links, and
+nothing else changes: the dashboard never imports drf-yasg unless `"drf_yasg"` is in `INSTALLED_APPS`.
 
-dashboard_urls = settings.DEV_DASHBOARD_SETTINGS
-schema_view = get_schema_view(
-    openapi.Info(title="DEV DASHBOARD API", default_version="v1"),
-    public=True,
-    permission_classes=(AllowAny,),
-)
-urlpatterns += [
-    path(dashboard_urls["swagger_url"] + "/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
-    path(dashboard_urls["redoc_url"] + "/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
-]
-```
-
-</details>
+### Optional extras
 
 <details>
 <summary><b>Token lifetimes</b> (Simple JWT)</summary>
@@ -333,6 +326,24 @@ urlpatterns += [
     path(dashboard_urls["jwt_token_url"], TokenObtainPairView.as_view(), name="token_get"),
     path(dashboard_urls["jwt_refresh_url"], TokenRefreshView.as_view(), name="token_refresh"),
     path(dashboard_urls["jwt_verify_url"], TokenVerifyView.as_view(), name="token_verify"),
+]
+```
+
+With the `docs` extra, add the API docs pages the same way:
+
+```python
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework.permissions import AllowAny
+
+schema_view = get_schema_view(
+    openapi.Info(title="DEV DASHBOARD API", default_version="v1"),
+    public=True,
+    permission_classes=(AllowAny,),
+)
+urlpatterns += [
+    path(dashboard_urls["swagger_url"] + "/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
+    path(dashboard_urls["redoc_url"] + "/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
 ]
 ```
 

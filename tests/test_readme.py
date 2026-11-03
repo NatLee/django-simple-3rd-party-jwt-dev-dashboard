@@ -1,4 +1,5 @@
 """The README's setup snippets must work when copied into a new Django project."""
+import importlib.util
 import os
 import re
 import textwrap
@@ -6,13 +7,14 @@ import types
 import warnings
 from datetime import timedelta
 from pathlib import Path
-from unittest import mock
+from unittest import mock, skipUnless
 
 from django.contrib import admin
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import path, reverse
 
 README = Path(__file__).resolve().parent.parent / "README.md"
+DOCS_INSTALLED = importlib.util.find_spec("drf_yasg") is not None
 
 
 def readme_python_block(marker):
@@ -71,12 +73,23 @@ class ReadmeSnippetTests(SimpleTestCase):
         self.assertEqual(namespace["SOCIAL_MICROSOFT_CLIENT_ID"], "<your-application-client-id>")
         self.assertEqual(namespace["SOCIAL_MICROSOFT_CLIENT_SECRET"], "from-the-environment")
 
-    def test_swagger_snippets_add_both_pages(self):
-        settings_ns = {"DEV_DASHBOARD_SETTINGS": {}}
-        exec(readme_python_block('DEV_DASHBOARD_SETTINGS["swagger_url"]'), settings_ns)
-        urls_ns = {"path": path, "urlpatterns": []}
+    def test_api_docs_settings_snippet_turns_both_pages_on(self):
+        namespace = {"INSTALLED_APPS": [], "DEV_DASHBOARD_SETTINGS": {}}
+        exec(readme_python_block('DEV_DASHBOARD_SETTINGS["swagger_url"]'), namespace)
 
-        with warnings.catch_warnings(), override_settings(DEV_DASHBOARD_SETTINGS=settings_ns["DEV_DASHBOARD_SETTINGS"]):
+        self.assertEqual(namespace["INSTALLED_APPS"], ["drf_yasg"])
+        self.assertEqual(
+            namespace["DEV_DASHBOARD_SETTINGS"],
+            {"swagger_url": "api/__hidden_swagger", "redoc_url": "api/__hidden_redoc"},
+        )
+
+    @skipUnless(DOCS_INSTALLED, "needs the [docs] extra: pip install -e .[docs]")
+    def test_hand_wired_api_docs_snippet_adds_both_pages(self):
+        # It follows the hand-written urls.py block, which defines dashboard_urls.
+        dashboard_urls = {"swagger_url": "api/__hidden_swagger", "redoc_url": "api/__hidden_redoc"}
+        urls_ns = {"path": path, "urlpatterns": [], "dashboard_urls": dashboard_urls}
+
+        with warnings.catch_warnings():
             # drf-yasg and its dependencies warn about their own deprecations on import.
             warnings.simplefilter("ignore", DeprecationWarning)
             exec(readme_python_block("get_schema_view("), urls_ns)

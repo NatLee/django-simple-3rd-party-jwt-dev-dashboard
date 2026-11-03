@@ -53,9 +53,11 @@ setuptools.setup(
         'django>=4.0.0',
         'djangorestframework',
         'django-simple-third-party-jwt>=0.2.3',
-        'drf-yasg',
     ],
     extras_require={
+        # Swagger and Redoc pages. drf-yasg 1.21.11 is the first release that no longer needs
+        # pkg_resources, which recent setuptools no longer ships.
+        'docs': ['drf-yasg>=1.21.11'],
         'dev': ['check-manifest'],
         # 'test': ['coverage'],
     },

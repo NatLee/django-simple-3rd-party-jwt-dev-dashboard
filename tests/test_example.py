@@ -1,12 +1,10 @@
 import os
-import re
 import subprocess
 import sys
 import warnings
 from pathlib import Path
 
 from django.test import SimpleTestCase
-from django.urls import path
 
 EXAMPLE = Path(__file__).resolve().parent.parent / "example" / "django_simple_third_party_jwt_dev_dashboard_example"
 EXAMPLE_URLS = EXAMPLE / "django_simple_third_party_jwt_dev_dashboard_example" / "urls.py"
@@ -68,25 +66,3 @@ class ExampleThirdPartySettingsTests(SimpleTestCase):
         )
 
         self.assertEqual(result.stdout.strip().splitlines()[-1], "[False, False, False]", result.stderr)
-
-
-class ExampleSwaggerBlockTests(SimpleTestCase):
-    def test_commented_swagger_block_works_once_uncommented(self):
-        text = EXAMPLE_URLS.read_text(encoding="utf-8")
-        block = text[text.index("# from drf_yasg import openapi"):]
-        code = "\n".join(re.sub(r"^# ?", "", line) for line in block.splitlines())
-        namespace = {
-            "path": path,
-            "urlpatterns": [],
-            "dashboard_urls": {"swagger_url": "api/__hidden_swagger", "redoc_url": "api/__hidden_redoc"},
-        }
-
-        with warnings.catch_warnings():
-            # drf-yasg and its dependencies warn about their own deprecations on import.
-            warnings.simplefilter("ignore", DeprecationWarning)
-            exec(code, namespace)
-
-        self.assertEqual(
-            [(str(p.pattern), p.name) for p in namespace["urlpatterns"]],
-            [("api/__hidden_swagger/", "schema-swagger-ui"), ("api/__hidden_redoc/", "schema-redoc")],
-        )

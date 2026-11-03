@@ -140,14 +140,6 @@ class NavbarTests(TestCase):
         self.assertNotContains(response, "Swagger")
         self.assertNotContains(response, "Redoc")
 
-    def test_swagger_and_redoc_links_follow_the_settings(self):
-        urls = {"swagger_url": "api/__hidden_swagger", "redoc_url": "api/__hidden_redoc"}
-        with mock.patch.dict(views.dev_dashboard_setting, urls):
-            response = self.client.get(DASHBOARD)
-
-        self.assertContains(response, 'href="/api/__hidden_swagger"')
-        self.assertContains(response, 'href="/api/__hidden_redoc"')
-
 
 class LoginEdgeCaseTests(TestCase):
     def setUp(self):

@@ -37,6 +37,15 @@ SIMPLE_JWT_URLS = {
     ),
 }
 
+# Navbar links to pages outside the dashboard. A link shows only while its page is served.
+LINK_SETTING_KEYS = ("admin_url", "swagger_url", "redoc_url")
+
+# The API docs pages all_urls serves with drf-yasg (the [docs] extra): key -> (drf-yasg UI, URL name).
+API_DOCS_URLS = {
+    "swagger_url": ("swagger", "schema-swagger-ui"),
+    "redoc_url": ("redoc", "schema-redoc"),
+}
+
 # A project that sets DEV_DASHBOARD_SETTINGS replaces this whole dict; keys it leaves out are
 # treated as empty.
 DEV_DASHBOARD_SETTINGS = getattr(settings, "DEV_DASHBOARD_SETTINGS", dict(DEFAULT_DEV_DASHBOARD_SETTINGS))

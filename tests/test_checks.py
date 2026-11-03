@@ -93,21 +93,6 @@ class StartupCheckTests(SimpleTestCase):
         with override_settings(ROOT_URLCONF=urlconf(DASHBOARD_URLS, moved, ADMIN, *SIMPLE_JWT)):
             self.assertEqual(self.ids(), [])
 
-    def test_navbar_link_to_a_page_that_is_not_served(self):
-        # The defaults link to Swagger and Redoc pages that a project may not have.
-        with mock.patch.dict(views.dev_dashboard_setting, {"swagger_url": "api/__hidden_swagger"}):
-            found = check_dashboard_setup()
-
-        self.assertEqual([m.id for m in found], ["dev_dashboard.W005"])
-        self.assertIn("Swagger link goes to /api/__hidden_swagger", found[0].msg)
-        for key in ("admin_url", "swagger_url", "redoc_url"):
-            self.assertIn(DEFAULT_DEV_DASHBOARD_SETTINGS[key], found[0].hint)
-
-    def test_admin_link_with_or_without_trailing_slash_is_fine(self):
-        # The admin is mounted at "api/__hidden_admin/"; the link has no slash (APPEND_SLASH redirects).
-        self.assertTrue(views.dev_dashboard_setting["admin_url"].endswith("admin"))
-        self.assertNotIn("dev_dashboard.W005", self.ids())
-
     def test_missing_request_context_processor(self):
         from django.conf import settings
 
