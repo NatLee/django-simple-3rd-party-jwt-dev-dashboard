@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 {% load bootstrap3 %}
-{% block title %} Login {% endblock %}
+{% block title %}Login{% endblock %}
 
 {% block content %}
-
 <div class="container mt-5">
   <div class="row justify-content-center">
     <div class="col-md-6">
@@ -15,21 +14,18 @@
             {% csrf_token %}
             {% bootstrap_form form %}
             <input type="hidden" name="next" value="{{ next }}" />
-            
+
             <div class="form-group mt-4">
-              <!-- JWT Login Button -->
               <button type="submit" name="action" value="jwt" class="btn btn-primary btn-lg btn-block">
                 <i class="glyphicon glyphicon-log-in"></i> JWT Login
               </button>
             </div>
 
             <div class="form-group">
-              <!-- Session Login Button -->
               <button type="submit" name="action" value="session" class="btn btn-secondary btn-lg btn-block">
                 <i class="glyphicon glyphicon-log-in"></i> Session Login
               </button>
             </div>
-
           </form>
         </div>
       </div>
@@ -37,28 +33,27 @@
   </div>
 </div>
 
-
 <script>
+  // Both buttons post the same form: "JWT Login" to Simple JWT's token URL (and keeps the
+  // tokens in the browser), "Session Login" to this dashboard's login view.
   $("form").on("submit", function (event) {
     event.preventDefault();
-  
-    let action = $(this).find("button[type=submit]:focus").val();
-  
-    if (action === 'jwt') {
-      // JWT Login logic
+
+    var action = $(this).find("button[type=submit]:focus").val();
+
+    if (action === "jwt") {
       $.ajax({
         type: "POST",
         url: "/{{ jwt_token_url }}",
         data: $(this).serialize(),
         success: function (data) {
           console.log(data);
-          localStorage.setItem('refresh_token', data.refresh);
-          localStorage.setItem('access_token', data.access);
+          localStorage.setItem("refresh_token", data.refresh);
+          localStorage.setItem("access_token", data.access);
           window.location.href = "/{{ dashboard_url }}";
-        }
+        },
       });
-    } else if (action === 'session') {
-      // Session Login logic
+    } else if (action === "session") {
       $.ajax({
         type: "POST",
         url: "/{{ dashboard_url }}/login",
@@ -66,11 +61,9 @@
         success: function (data) {
           console.log(data);
           window.location.href = "/{{ dashboard_url }}";
-        }
+        },
       });
     }
   });
-  
 </script>
-
 {% endblock %}

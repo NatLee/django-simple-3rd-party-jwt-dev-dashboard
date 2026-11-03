@@ -1,1 +1,1 @@
-from django.db import models
+"""The dashboard has no database models."""

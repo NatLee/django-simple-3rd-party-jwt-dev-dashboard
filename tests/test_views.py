@@ -1,6 +1,11 @@
+from unittest import mock
+
+from django.conf import settings
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
+
+from django_simple_third_party_jwt_dev_dashboard import views
 
 DASHBOARD = "/api/__hidden_dev_dashboard/"
 LOGIN = DASHBOARD + "login"
@@ -98,3 +103,72 @@ class MicrosoftButtonTests(TestCase):
 
         self.assertContains(response, 'src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg"')
         self.assertNotContains(response, "upload.wikimedia.org/wikipedia/commons/thumb/")
+
+
+class NavbarTests(TestCase):
+    def test_google_sign_in_uses_the_configured_client_id(self):
+        response = self.client.get(DASHBOARD)
+
+        self.assertContains(
+            response,
+            '<meta name="google-signin-client_id" content="test-google-client-id.apps.googleusercontent.com">',
+        )
+        self.assertContains(response, 'data-client_id="test-google-client-id.apps.googleusercontent.com"')
+
+    def test_anonymous_user_gets_login_but_no_session_logout(self):
+        response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, 'href="%s"' % LOGIN)
+        self.assertContains(response, "JWT Logout")
+        self.assertNotContains(response, "Session Logout")
+
+    def test_logged_in_user_is_greeted_and_can_end_the_session(self):
+        User.objects.create_user("alice", password="s3cret-pass")
+        self.client.login(username="alice", password="s3cret-pass")
+
+        response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, "Hello alice")
+        self.assertContains(response, 'href="/api/__hidden_dev_dashboard/logout"')
+
+    def test_swagger_and_redoc_links_are_hidden_unless_configured(self):
+        # tests/settings.py leaves swagger_url and redoc_url out, like the README.
+        response = self.client.get(DASHBOARD)
+
+        self.assertNotContains(response, "Swagger")
+        self.assertNotContains(response, "Redoc")
+
+    def test_swagger_and_redoc_links_follow_the_settings(self):
+        urls = {"swagger_url": "api/__hidden_swagger", "redoc_url": "api/__hidden_redoc"}
+        with mock.patch.dict(views.dev_dashboard_setting, urls):
+            response = self.client.get(DASHBOARD)
+
+        self.assertContains(response, 'href="/api/__hidden_swagger"')
+        self.assertContains(response, 'href="/api/__hidden_redoc"')
+
+
+class LoginEdgeCaseTests(TestCase):
+    def setUp(self):
+        User.objects.create_user("alice", password="s3cret-pass")
+
+    def test_wrong_password_shows_the_form_error(self):
+        response = self.client.post(LOGIN, {"username": "alice", "password": "wrong"})
+
+        self.assertContains(response, "Please enter a correct username and password")
+
+    def test_login_works_without_a_csrf_token(self):
+        # The view is csrf_exempt; the login page posts the form with jQuery.
+        client = Client(enforce_csrf_checks=True)
+
+        response = client.post(LOGIN, {"username": "alice", "password": "s3cret-pass"})
+
+        self.assertRedirects(response, DASHBOARD)
+
+    def test_logout_sends_anonymous_users_to_the_login_url(self):
+        response = self.client.get(LOGOUT)
+
+        self.assertRedirects(
+            response,
+            "%s?next=%s" % (settings.LOGIN_URL, LOGOUT),
+            fetch_redirect_response=False,
+        )
