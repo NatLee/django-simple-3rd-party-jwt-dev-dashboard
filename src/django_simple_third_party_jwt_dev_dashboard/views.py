@@ -12,6 +12,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
 from django_simple_third_party_jwt import settings as jwt_settings
+from django_simple_third_party_jwt_dev_dashboard import __version__
 from django_simple_third_party_jwt_dev_dashboard.settings import DEV_DASHBOARD_SETTINGS
 
 # Paths the templates link to or call from JavaScript, taken from DEV_DASHBOARD_SETTINGS.
@@ -33,6 +34,7 @@ dev_dashboard_setting = {
     "third_party_jwt_url": jwt_settings.JWT_3RD_PREFIX,
     **{key: DEV_DASHBOARD_SETTINGS.get(key, "") for key in URL_SETTING_KEYS},
     "debug": django_settings.DEBUG,
+    "dashboard_version": __version__,
 }
 
 # Sign in with Google needs both on the page that shows its button: Google checks the page's

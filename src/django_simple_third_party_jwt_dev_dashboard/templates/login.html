@@ -1,69 +1,54 @@
 {% extends "base.html" %}
-{% load bootstrap3 %}
-{% block title %}Login{% endblock %}
+{% block title %}Login · Dev Dashboard{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6">
-      <div class="card shadow">
-        <div class="card-body">
-          <h3 class="card-title text-center">Login</h3>
-          <hr>
-          <form class="form-horizontal" autocomplete="off" method="POST">
-            {% csrf_token %}
-            {% bootstrap_form form %}
-            <input type="hidden" name="next" value="{{ next }}" />
+<section class="dd-card dd-login" aria-labelledby="login-title">
+  <p class="dd-eyebrow">Username and password</p>
+  <h1 id="login-title">Login</h1>
 
-            <div class="form-group mt-4">
-              <button type="submit" name="action" value="jwt" class="btn btn-primary btn-lg btn-block">
-                <i class="glyphicon glyphicon-log-in"></i> JWT Login
-              </button>
-            </div>
-
-            <div class="form-group">
-              <button type="submit" name="action" value="session" class="btn btn-secondary btn-lg btn-block">
-                <i class="glyphicon glyphicon-log-in"></i> Session Login
-              </button>
-            </div>
-          </form>
-        </div>
+  <div class="dd-login__grid">
+    <form id="login-form" class="dd-form" autocomplete="off" method="POST" action="{% url 'dev-session-login' %}">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="dd-alert dd-alert--error" role="alert">
+        <span class="dd-alert__text">{% for error in form.non_field_errors %}{{ error }} {% endfor %}</span>
       </div>
-    </div>
+      {% endif %}
+      <div class="dd-alert dd-alert--error" id="login-error" role="alert" hidden>
+        <span class="dd-alert__text"></span>
+      </div>
+
+      {% for field in form %}
+      <div class="dd-field{% if field.errors %} dd-field--error{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}<p class="dd-field__error">{{ error }}</p>{% endfor %}
+      </div>
+      {% endfor %}
+      <input type="hidden" name="next" value="{{ next }}" />
+
+      <div class="dd-form__actions">
+        <button type="submit" name="action" value="jwt" class="dd-btn dd-btn--primary dd-btn--lg">JWT Login</button>
+        <button type="submit" name="action" value="session" class="dd-btn dd-btn--lg">Session Login</button>
+      </div>
+    </form>
+
+    <ul class="dd-how">
+      <li>
+        <strong>JWT Login</strong>
+        Posts to <code>/{{ jwt_token_url }}</code> and keeps the access and refresh tokens in this browser.
+      </li>
+      <li>
+        <strong>Session Login</strong>
+        Posts to this page; Django sets its session cookie and the top bar greets you.
+      </li>
+      <li>
+        <strong>Google or Microsoft</strong>
+        Use the third-party login buttons on this page. They need the OAuth settings from the README.
+      </li>
+    </ul>
   </div>
-</div>
+</section>
 
-<script>
-  // Both buttons post the same form: "JWT Login" to Simple JWT's token URL (and keeps the
-  // tokens in the browser), "Session Login" to this dashboard's login view.
-  $("form").on("submit", function (event) {
-    event.preventDefault();
-
-    var action = $(this).find("button[type=submit]:focus").val();
-
-    if (action === "jwt") {
-      $.ajax({
-        type: "POST",
-        url: "/{{ jwt_token_url }}",
-        data: $(this).serialize(),
-        success: function (data) {
-          console.log(data);
-          localStorage.setItem("refresh_token", data.refresh);
-          localStorage.setItem("access_token", data.access);
-          window.location.href = "/{{ dashboard_url }}";
-        },
-      });
-    } else if (action === "session") {
-      $.ajax({
-        type: "POST",
-        url: "/{{ dashboard_url }}/login",
-        data: $(this).serialize(),
-        success: function (data) {
-          console.log(data);
-          window.location.href = "/{{ dashboard_url }}";
-        },
-      });
-    }
-  });
-</script>
+<script>bind_login_form(document.getElementById("login-form"));</script>
 {% endblock %}

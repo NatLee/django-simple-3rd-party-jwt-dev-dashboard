@@ -2,56 +2,86 @@
 {% block title %}Dev Dashboard{% endblock %}
 
 {% block content %}
-<div class="jumbotron text-center">
-  <h1 class="display-4">Dev Dashboard</h1>
-  <p class="lead">Welcome to your dashboard.</p>
-</div>
+<section class="dd-hero">
+  <p class="dd-eyebrow">JWT and session playground</p>
+  <h1>Dev Dashboard</h1>
+  <p class="dd-lead">Log in every way your project supports, then watch the JWT and the session here.</p>
+</section>
 
-<!-- Client IDs from django-simple-third-party-jwt's settings -->
-<div class="container mb-4">
-  <h2>Google Client ID</h2>
-  <div class="alert alert-info">{{ social_google_client_id }}</div>
-
-  <h2>Microsoft Client ID</h2>
-  <div class="alert alert-info">
-      {{ social_microsoft_client_id }}
+<!-- The JWT kept in this browser: refreshed and verified on every visit -->
+<section class="dd-card dd-state-card" id="jwt-card" data-jwt-state="none" aria-labelledby="jwt-title">
+  <div class="dd-card__head">
+    <h2 id="jwt-title">JWT</h2>
+    <span class="dd-status" id="jwt-status" role="status">Not logged in</span>
   </div>
-</div>
+  <p class="dd-card__sub">Kept in this browser's localStorage. Every visit refreshes it and asks the server to verify it.</p>
+  <div class="dd-token" id="token" data-empty>No JWT in this browser yet. Use JWT Login, or the Google or Microsoft button.</div>
+  <div class="dd-legend" aria-hidden="true">
+    <span class="dd-jwt-part--header">header</span>
+    <span class="dd-jwt-part--payload">payload</span>
+    <span class="dd-jwt-part--signature">signature</span>
+  </div>
+  <div class="dd-result" id="result" aria-live="polite"></div>
+  <dl class="dd-claims" id="claims" aria-label="Claims in the token" hidden></dl>
+  <div class="dd-actions">
+    <button type="button" class="dd-btn" id="copy-token" disabled onclick="copy_text(document.getElementById('token').textContent.trim(), this)">Copy header</button>
+    <button type="button" class="dd-btn" onclick="refresh_stored_token()">Refresh now</button>
+    <a class="dd-btn" href="{% url 'dev-session-login' %}">JWT Login</a>
+  </div>
+</section>
 
-<!-- What the browser and the server know about this visitor -->
-<div class="container">
-  <h2>JWT Field</h2>
-  <div class="alert alert-secondary" id="token"></div>
-  <div class="alert alert-success" id="result"></div>
-
-  <h2>Session Field</h2>
+<!-- What the server knows about this visitor -->
+<section class="dd-card dd-state-card" data-session-state="{% if request.user.is_authenticated %}in{% else %}none{% endif %}" aria-labelledby="session-title">
+  <div class="dd-card__head">
+    <h2 id="session-title">Session</h2>
+    <span class="dd-status">{% if request.user.is_authenticated %}Logged in{% else %}No session{% endif %}</span>
+  </div>
+  <p class="dd-card__sub">Django's session cookie, set by Session Login or the admin.</p>
   {% if request.user.is_authenticated %}
-  <div class="alert alert-primary">
-    You are logged in as `{{ request.user }}` with this session!
+  <p class="dd-session__who">
+    Logged in as <strong>{{ request.user }}</strong> with this session.
+    {% if request.user.is_superuser %}<span class="dd-badge">superuser</span>{% elif request.user.is_staff %}<span class="dd-badge">staff</span>{% endif %}
+  </p>
+  <div class="dd-actions">
+    <a class="dd-btn" href="/{{ dashboard_url }}/logout">Session Logout</a>
   </div>
   {% else %}
-  <div class="alert alert-danger">No any session login.</div>
+  <p class="dd-session__who dd-muted">No session login yet.</p>
+  <div class="dd-actions">
+    <a class="dd-btn" href="{% url 'dev-session-login' %}">Session Login</a>
+  </div>
   {% endif %}
-</div>
+</section>
 
-<script>
-  // On every visit: if the browser keeps a JWT, refresh it, then verify and show the new one.
-  var jwt_token = localStorage.getItem("access_token");
-  var jwt_token_refresh = localStorage.getItem("refresh_token");
+<script>refresh_stored_token();</script>
+{% endblock %}
 
-  if (jwt_token) {
-    $.ajax({
-      type: "POST",
-      url: "/{{ jwt_refresh_url }}",
-      data: { refresh: jwt_token_refresh },
-      success: function (data) {
-        localStorage.setItem("access_token", data.access);
-        show_verified_token(data.access, "");
-      },
-      error: show_login_error,
-    });
-  } else {
-    $("#token").text("Have not login with JWT token!");
-  }
-</script>
+{% block aside %}
+{{ block.super }}
+<!-- Client IDs from django-simple-third-party-jwt's settings -->
+<section class="dd-card" aria-labelledby="clients-title">
+  <div class="dd-card__head"><h2 id="clients-title">OAuth clients</h2></div>
+  <dl class="dd-kv">
+    <div>
+      <dt>Google Client ID</dt>
+      <dd><code>{{ social_google_client_id }}</code></dd>
+    </div>
+    <div>
+      <dt>Microsoft Client ID</dt>
+      <dd><code>{{ social_microsoft_client_id }}</code></dd>
+    </div>
+  </dl>
+</section>
+
+<!-- Where the buttons send their requests -->
+<section class="dd-card" aria-labelledby="endpoints-title">
+  <div class="dd-card__head"><h2 id="endpoints-title">Endpoints</h2></div>
+  <ul class="dd-endpoints">
+    <li><span class="dd-method">POST</span><code>/{{ jwt_token_url }}</code><span class="dd-what">JWT Login (Simple JWT)</span></li>
+    <li><span class="dd-method">POST</span><code>/{{ jwt_refresh_url }}</code><span class="dd-what">refresh, on every visit</span></li>
+    <li><span class="dd-method">POST</span><code>/{{ jwt_verify_url }}</code><span class="dd-what">verify, after each login</span></li>
+    <li><span class="dd-method">POST</span><code>/{{ third_party_jwt_url }}/auth/google/token</code><span class="dd-what">Google credential to JWT</span></li>
+    <li><span class="dd-method">GET</span><code>/{{ third_party_jwt_url }}/auth/microsoft/signin</code><span class="dd-what">Microsoft sign-in</span></li>
+  </ul>
+</section>
 {% endblock %}
