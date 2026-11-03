@@ -233,8 +233,10 @@ SOCIAL_MICROSOFT_CLIENT_SECRET = os.environ["SOCIAL_MICROSOFT_CLIENT_SECRET"]
 VALID_REGISTER_DOMAINS = ["gmail.com", "hotmail.com"]
 ```
 
-Without them, django-simple-3rd-party-jwt falls back to its author's demo apps and logs a warning.
-Those may stop working at any time, so register your own:
+Without them, django-simple-3rd-party-jwt falls back to its author's demo apps and logs a warning; its
+releases after 0.4.0 keep only the Google one, so Microsoft sign-in stays off until both Microsoft
+settings are set. The dashboard then says "not set up" in place of that button, and `manage.py check`
+names the missing settings. The demo apps may stop working at any time, so register your own:
 
 <details>
 <summary><b>Get a Google client ID</b></summary>
@@ -382,7 +384,7 @@ python manage.py runserver
 ```
 
 To try your own Google or Microsoft app, export its values before `runserver` (or `docker compose up`);
-anything you leave unset falls back to the demo apps:
+anything you leave unset is left to django-simple-3rd-party-jwt (see above):
 
 ```bash
 export SOCIAL_GOOGLE_CLIENT_ID="<your-client-id>.apps.googleusercontent.com"

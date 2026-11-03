@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <meta name="google-signin-scope" content="profile email">
-    <meta name="google-signin-client_id" content="{{ social_google_client_id }}">
+    {% if sign_ins.google.configured %}<meta name="google-signin-client_id" content="{{ social_google_client_id }}">{% endif %}
     <title>{% block title %}{% endblock %}</title>
 
     <style>
@@ -88,8 +88,13 @@
                 <p class="dd-card__sub">Google and Microsoft answer with a JWT from django-simple-3rd-party-jwt.</p>
                 {% if google_token_url and microsoft_signin_url %}
                 <div class="dd-providers">
+                    {% if sign_ins.google.configured %}
                     <div id="g_id_onload" data-client_id="{{ social_google_client_id }}" data-callback="get_jwt_using_google_credential"></div>
                     <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+                    {% else %}
+                    {% include "django_simple_third_party_jwt_dev_dashboard/sign-in-not-set-up.html" with sign_in=sign_ins.google %}
+                    {% endif %}
+                    {% if sign_ins.microsoft.configured %}
                     {% comment %}
                     The logo is Microsoft's own file for sign-in buttons (microsoft-logo.svg, unaltered), from
                     https://learn.microsoft.com/en-us/entra/identity-platform/howto-add-branding-in-apps
@@ -99,6 +104,9 @@
                         <span class="dd-ms-logo" aria-hidden="true">{% include "django_simple_third_party_jwt_dev_dashboard/microsoft-logo.svg" %}</span>
                         Sign in with Microsoft
                     </button>
+                    {% else %}
+                    {% include "django_simple_third_party_jwt_dev_dashboard/sign-in-not-set-up.html" with sign_in=sign_ins.microsoft %}
+                    {% endif %}
                 </div>
                 {% else %}
                 <p class="dd-alert dd-alert--error">Not available: this project does not include <code>django_simple_third_party_jwt.urls</code>.</p>

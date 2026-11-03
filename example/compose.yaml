@@ -6,7 +6,7 @@
 # Then open http://localhost:8000/api/__hidden_dev_dashboard/ and log in as demo / demo-pass-123.
 # The image installs the dashboard from this checkout. To try your own Google or Microsoft app,
 # set SOCIAL_GOOGLE_CLIENT_ID, SOCIAL_MICROSOFT_CLIENT_ID and SOCIAL_MICROSOFT_CLIENT_SECRET
-# before `docker compose up`; unset ones fall back to django-simple-3rd-party-jwt's demo apps.
+# before `docker compose up`; unset ones are left to django-simple-3rd-party-jwt's defaults.
 services:
   dashboard:
     build:

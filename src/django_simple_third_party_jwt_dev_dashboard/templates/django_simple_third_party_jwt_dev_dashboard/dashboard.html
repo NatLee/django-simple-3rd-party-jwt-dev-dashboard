@@ -62,14 +62,12 @@
 <section class="dd-card" aria-labelledby="clients-title">
   <div class="dd-card__head"><h2 id="clients-title">OAuth clients</h2></div>
   <dl class="dd-kv">
+    {% for sign_in in sign_ins.values %}
     <div>
-      <dt>Google Client ID</dt>
-      <dd><code>{{ social_google_client_id }}</code></dd>
+      <dt>{{ sign_in.label }} Client ID</dt>
+      <dd>{% if sign_in.configured %}<code>{{ sign_in.client_id }}</code>{% else %}<span class="dd-muted">Not set up</span>{% endif %}</dd>
     </div>
-    <div>
-      <dt>Microsoft Client ID</dt>
-      <dd><code>{{ social_microsoft_client_id }}</code></dd>
-    </div>
+    {% endfor %}
   </dl>
 </section>
 
