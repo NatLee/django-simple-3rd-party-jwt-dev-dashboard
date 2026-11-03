@@ -1,2 +1,3 @@
 # pkg
+django-simple-third-party-jwt-dev-dashboard
 django-simple-third-party-jwt

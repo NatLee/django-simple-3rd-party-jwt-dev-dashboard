@@ -4,7 +4,7 @@
 
 This is a simple dashboard for showing multi login(JWT, session and 3rd party).
 
-Dashboard is used with [Django-Simple-3rd-Party-JWT](https://github.com/NatLee/Django-Simple-3rd-Party-JWT).
+Dashboard is used with [django-simple-3rd-party-jwt](https://github.com/NatLee/django-simple-3rd-party-jwt).
 
 ## Installation
 
@@ -30,7 +30,7 @@ Check it in [Pypi](https://pypi.org/project/django-simple-third-party-jwt-dev-da
       #"drf_yasg", # (OPTIONAL) for swagger
       'bootstrap3', # <------ MUST
       # 3rd party login
-      'django_simple_third_party_jwt' # <------ MUST
+      'django_simple_third_party_jwt', # <------ MUST
       # debug dashboard
       'django_simple_third_party_jwt_dev_dashboard', # <------ MUST
       # ---------------------------
@@ -54,9 +54,11 @@ Check it in [Pypi](https://pypi.org/project/django-simple-third-party-jwt-dev-da
 
   # -------------- START - 3rd party login Setting --------------
   LOGIN_REDIRECT_URL = '/' + DEV_DASHBOARD_SETTINGS['dashboard_url'] # <- (OPTIONAL) for redirect after login
-  JWT_3RD_PREFIX = 'api' # <- (OPTIONAL) for 3rd party login
+  JWT_3RD_PREFIX = 'api' # <- (MUST) URL prefix of the 3rd party login routes
   # --------------- END - 3rd party login Setting -----------------
   ```
+
+  `JWT_3RD_PREFIX` is required: the URLs of `django_simple_third_party_jwt` read it, and the project does not start without it.
 
   - (MUST) Policy for Google API
 
@@ -79,14 +81,16 @@ Check it in [Pypi](https://pypi.org/project/django-simple-third-party-jwt-dev-da
 
   # -------------- START - Microsoft Auth Setting --------------
   SOCIAL_MICROSOFT_CLIENT_ID = '32346173-22bc-43b2-b6ed-f88f6a76e38c'
-  SOCIAL_MICROSOFT_CLIENT_SECRET = 'K5z8Q~dIXDiFN5qjMjRjIx34cZOJ3Glkrg.dxcG9'
+  SOCIAL_MICROSOFT_CLIENT_SECRET = '<your-client-secret>'
   # --------------- END - Microsoft Auth Setting -----------------
 
   ```
 
+  Keep your own client secret out of version control, for example by reading it from an environment variable.
+
 > You can regist `SOCIAL_GOOGLE_CLIENT_ID` on Google Cloud Platform.
 
-  [Google Colud | API和服務 | 憑證](https://console.cloud.google.com/apis/credentials)
+  [Google Cloud | API和服務 | 憑證](https://console.cloud.google.com/apis/credentials)
 
   1. Create a new project and create a new OAuth 2.0 Client ID.
     ![](https://i.imgur.com/7UKP3I7.png)
@@ -113,6 +117,9 @@ Check it in [Pypi](https://pypi.org/project/django-simple-third-party-jwt-dev-da
   URL path for dashboard. (MUST)
 
   ```python
+  from django.conf import settings
+  from django.urls import include
+
   # --------------- 3rd party login
   # app route
   urlpatterns += [
@@ -156,7 +163,15 @@ And visit `http://localhost:8000/api/__hidden_dev_dashboard`
 
 ## Example
 
-Check `./example/django_simple_third_party_jwt_dev_dashboard_example/`.
+Check `./example/django_simple_third_party_jwt_dev_dashboard_example/`. To run it:
+
+```bash
+cd example/django_simple_third_party_jwt_dev_dashboard_example
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver 0.0.0.0:8000
+```
 
 ## More
 
@@ -190,8 +205,8 @@ SWAGGER_SETTINGS = {
             "in": "header",
         }
     },
-    "LOGIN_URL": "/api/__hiddenadmin/login/",
-    "LOGOUT_URL": "/api/__hiddenadmin/logout/",
+    "LOGIN_URL": "/api/__hidden_admin/login/",
+    "LOGOUT_URL": "/api/__hidden_admin/logout/",
 }
 
 # --------------------------------------------
@@ -247,4 +262,13 @@ bash dev-reinstall.sh
 
 ```powershell
 ./dev-reinstall.ps1
+```
+
+### Run the tests
+
+The tests use the settings in `tests/settings.py`, which follow the Quick Start above. CI runs the same command on Python 3.8 to 3.14.
+
+```bash
+pip install tox
+tox -e py
 ```

@@ -64,7 +64,8 @@ urlpatterns += [
 ]
 # ---------------------------------
 
-'''
+# Optional Swagger setup, disabled. Raw string because it contains regex escapes.
+r'''
 # ----------------------- Swagger
 from django.urls import re_path
 from drf_yasg.views import get_schema_view

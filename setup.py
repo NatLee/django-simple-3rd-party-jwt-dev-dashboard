@@ -4,7 +4,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
 
 PROJECT_NAME = 'django-simple-third-party-jwt-dev-dashboard'
-GIT_REPO_NAME = 'Django-Simple-3rd-Party-JWT-Dev-Dashboard'
+GIT_REPO_NAME = 'django-simple-3rd-party-jwt-dev-dashboard'
 
 setuptools.setup(
     name=PROJECT_NAME,
@@ -17,9 +17,9 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url=f'https://github.com/NatLee/{GIT_REPO_NAME}',
     project_urls={
-        'Documentation': f'https://github.com/natlee/{GIT_REPO_NAME}',
-        'Bug Reports': f'https://github.com/natlee/{GIT_REPO_NAME}/issues',
-        'Source Code': f'https://github.com/natlee/{GIT_REPO_NAME}',
+        'Documentation': f'https://github.com/NatLee/{GIT_REPO_NAME}',
+        'Bug Reports': f'https://github.com/NatLee/{GIT_REPO_NAME}/issues',
+        'Source Code': f'https://github.com/NatLee/{GIT_REPO_NAME}',
         # 'Funding': '',
         # 'Say Thanks!': '',
     },
@@ -45,6 +45,8 @@ setuptools.setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         'Programming Language :: Python :: 3 :: Only',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
